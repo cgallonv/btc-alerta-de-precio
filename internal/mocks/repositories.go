@@ -2,7 +2,6 @@ package mocks
 
 import (
 	"btc-alerta-de-precio/internal/storage"
-	"time"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -71,16 +70,6 @@ func (m *MockPriceRepository) GetLatestPrice() (*storage.PriceHistory, error) {
 func (m *MockPriceRepository) GetPriceHistory(limit int) ([]storage.PriceHistory, error) {
 	args := m.Called(limit)
 	return args.Get(0).([]storage.PriceHistory), args.Error(1)
-}
-
-func (m *MockPriceRepository) GetPriceHistoryByDateRange(start, end time.Time) ([]storage.PriceHistory, error) {
-	args := m.Called(start, end)
-	return args.Get(0).([]storage.PriceHistory), args.Error(1)
-}
-
-func (m *MockPriceRepository) CleanOldPriceHistory(days int) error {
-	args := m.Called(days)
-	return args.Error(0)
 }
 
 // MockNotificationRepository is a mock implementation of interfaces.NotificationRepository

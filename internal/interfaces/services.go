@@ -25,13 +25,6 @@ type AlertEvaluator interface {
 	ShouldTrigger(alert *storage.Alert, currentPrice, previousPrice float64) bool
 }
 
-// PriceMonitor defines the interface for price monitoring operations
-type PriceMonitor interface {
-	StartMonitoring(interval time.Duration)
-	Stop()
-	IsMonitoring() bool
-}
-
 // ConfigProvider defines the interface for configuration access
 type ConfigProvider interface {
 	GetCheckInterval() time.Duration

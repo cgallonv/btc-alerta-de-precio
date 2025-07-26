@@ -4,7 +4,6 @@ import (
 	"btc-alerta-de-precio/internal/errors"
 	"btc-alerta-de-precio/internal/interfaces"
 	"btc-alerta-de-precio/internal/storage"
-	"time"
 )
 
 // GormAlertRepository adapts storage.Database to implement AlertRepository interface
@@ -100,22 +99,6 @@ func (r *GormPriceRepository) GetPriceHistory(limit int) ([]storage.PriceHistory
 	return prices, nil
 }
 
-func (r *GormPriceRepository) GetPriceHistoryByDateRange(start, end time.Time) ([]storage.PriceHistory, error) {
-	prices, err := r.db.GetPriceHistoryByDateRange(start, end)
-	if err != nil {
-		return nil, errors.WrapError(err, "DATABASE_GET_PRICE_HISTORY_RANGE", "Failed to get price history by date range").
-			WithField("start", start).WithField("end", end)
-	}
-	return prices, nil
-}
-
-func (r *GormPriceRepository) CleanOldPriceHistory(days int) error {
-	if err := r.db.CleanOldPriceHistory(days); err != nil {
-		return errors.WrapError(err, "DATABASE_CLEAN_PRICE_HISTORY", "Failed to clean old price history").WithField("days", days)
-	}
-	return nil
-}
-
 // GormNotificationRepository adapts storage.Database to implement NotificationRepository interface
 type GormNotificationRepository struct {
 	db *storage.Database
@@ -139,38 +122,6 @@ func (r *GormNotificationRepository) GetNotificationLogs(alertID uint, limit int
 			WithField("alert_id", alertID).WithField("limit", limit)
 	}
 	return logs, nil
-}
-
-// GormWebPushRepository adapts storage.Database to implement WebPushRepository interface
-type GormWebPushRepository struct {
-	db *storage.Database
-}
-
-func NewGormWebPushRepository(db *storage.Database) interfaces.WebPushRepository {
-	return &GormWebPushRepository{db: db}
-}
-
-func (r *GormWebPushRepository) SaveWebPushSubscription(sub *storage.WebPushSubscription) error {
-	if err := r.db.SaveWebPushSubscription(sub); err != nil {
-		return errors.WrapError(err, "DATABASE_SAVE_WEBPUSH_SUBSCRIPTION", "Failed to save web push subscription")
-	}
-	return nil
-}
-
-func (r *GormWebPushRepository) GetActiveWebPushSubscriptions() ([]storage.WebPushSubscription, error) {
-	subs, err := r.db.GetActiveWebPushSubscriptions()
-	if err != nil {
-		return nil, errors.WrapError(err, "DATABASE_GET_WEBPUSH_SUBSCRIPTIONS", "Failed to get active web push subscriptions")
-	}
-	return subs, nil
-}
-
-func (r *GormWebPushRepository) RemoveWebPushSubscription(endpoint string) error {
-	if err := r.db.RemoveWebPushSubscription(endpoint); err != nil {
-		return errors.WrapError(err, "DATABASE_REMOVE_WEBPUSH_SUBSCRIPTION", "Failed to remove web push subscription").
-			WithField("endpoint", endpoint)
-	}
-	return nil
 }
 
 // GormStatsRepository adapts storage.Database to implement StatsRepository interface
