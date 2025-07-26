@@ -128,8 +128,8 @@ func (a *Alert) Validate() error {
 		return fmt.Errorf("target price must be greater than 0")
 	}
 
-	if a.Type == "change" && (a.Percentage <= 0 || a.Percentage > 100) {
-		return fmt.Errorf("percentage must be between 0 and 100")
+	if a.Type == "change" && (a.Percentage < -100 || a.Percentage > 100) {
+		return fmt.Errorf("percentage must be between -100 and 100")
 	}
 
 	if a.EnableEmail && a.Email == "" {
