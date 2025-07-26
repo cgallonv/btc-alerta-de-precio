@@ -463,7 +463,13 @@ function getAlertDescription(alert) {
         case 'below':
             return `Precio por debajo de $${alert.target_price.toLocaleString()}`;
         case 'change':
-            return `Cambio de ${alert.percentage}% en el precio`;
+            if (alert.percentage > 0) {
+                return `Subida de ${alert.percentage}% o más`;
+            } else if (alert.percentage < 0) {
+                return `Bajada de ${Math.abs(alert.percentage)}% o más`;
+            } else {
+                return `Cambio de ${alert.percentage}% en el precio`;
+            }
         default:
             return 'Tipo de alerta desconocido';
     }

@@ -5,14 +5,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"btc-alerta-de-precio/internal/alerts"
+	"btc-alerta-de-precio/internal/interfaces"
 	"btc-alerta-de-precio/internal/storage"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Handler struct {
-	alertService *alerts.Service
+	alertService interfaces.AlertService
 }
 
 type Response struct {
@@ -28,7 +28,7 @@ type AlertUpdateRequest struct {
 	Percentage  *float64 `json:"percentage,omitempty"`
 }
 
-func NewHandler(alertService *alerts.Service) *Handler {
+func NewHandler(alertService interfaces.AlertService) *Handler {
 	return &Handler{
 		alertService: alertService,
 	}
