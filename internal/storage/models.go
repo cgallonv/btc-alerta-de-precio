@@ -19,9 +19,10 @@ type Alert struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// Configuración de notificaciones
-	EnableEmail   bool `json:"enable_email" gorm:"default:true"`
-	EnableDesktop bool `json:"enable_desktop" gorm:"default:true"`
-	EnableWebPush bool `json:"enable_web_push" gorm:"default:false"`
+	EnableEmail    bool `json:"enable_email" gorm:"default:true"`
+	EnableDesktop  bool `json:"enable_desktop" gorm:"default:true"`
+	EnableWebPush  bool `json:"enable_web_push" gorm:"default:false"`
+	EnableTelegram bool `json:"enable_telegram" gorm:"default:false"`
 
 	// Tracking de activaciones
 	LastTriggered *time.Time `json:"last_triggered"`

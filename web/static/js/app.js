@@ -356,6 +356,18 @@ function displayAlerts(alerts) {
                                 '• Nunca activada'
                             }
                         </small>
+                        <div class="mt-2">
+                            <small class="text-muted">Notificaciones: </small>
+                            ${alert.enable_email ? 
+                                '<span class="badge bg-primary me-1"><i class="fas fa-envelope"></i> Email</span>' : ''
+                            }
+                            ${alert.enable_desktop ? 
+                                '<span class="badge bg-success me-1"><i class="fas fa-desktop"></i> Desktop</span>' : ''
+                            }
+                            ${alert.enable_telegram ? 
+                                '<span class="badge bg-info me-1"><i class="fab fa-telegram"></i> Telegram</span>' : ''
+                            }
+                        </div>
                         ${alert.trigger_count > 0 ? 
                             `<br><small class="text-info">Activada ${alert.trigger_count} vez${alert.trigger_count > 1 ? 'es' : ''}</small>` : 
                             ''
@@ -407,6 +419,7 @@ async function createAlert(event) {
         email: document.getElementById('alertEmail').value,
         enable_email: document.getElementById('enableEmail').checked,
         enable_desktop: document.getElementById('enableDesktop').checked,
+        enable_telegram: document.getElementById('enableTelegram').checked,
         is_active: true
     };
     

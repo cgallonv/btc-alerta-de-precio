@@ -54,7 +54,7 @@ func (s *Service) SendAlert(data *NotificationData) error {
 	}
 
 	// Enviar notificación de Telegram
-	if s.config.EnableTelegramNotifications {
+	if s.config.EnableTelegramNotifications && data.Alert.EnableTelegram {
 		if err := s.sendTelegramNotification(data); err != nil {
 			log.Printf("Error enviando notificación de Telegram: %v", err)
 			errors = append(errors, fmt.Errorf("telegram: %w", err))
