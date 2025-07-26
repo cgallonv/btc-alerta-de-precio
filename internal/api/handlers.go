@@ -21,6 +21,12 @@ type Response struct {
 	Message string      `json:"message,omitempty"`
 }
 
+// AlertUpdateRequest para la funcionalidad de edición limitada
+type AlertUpdateRequest struct {
+	TargetPrice *float64 `json:"target_price,omitempty"`
+	Percentage  *float64 `json:"percentage,omitempty"`
+}
+
 func NewHandler(alertService *alerts.Service) *Handler {
 	return &Handler{
 		alertService: alertService,
@@ -188,8 +194,8 @@ func (h *Handler) updateAlert(c *gin.Context) {
 		return
 	}
 
-	var alert storage.Alert
-	if err := c.ShouldBindJSON(&alert); err != nil {
+	var updateReq AlertUpdateRequest
+	if err := c.ShouldBindJSON(&updateReq); err != nil {
 		c.JSON(http.StatusBadRequest, Response{
 			Success: false,
 			Error:   err.Error(),
@@ -197,8 +203,45 @@ func (h *Handler) updateAlert(c *gin.Context) {
 		return
 	}
 
-	alert.ID = uint(id)
-	if err := h.alertService.UpdateAlert(&alert); err != nil {
+	// Obtener la alerta actual
+	alert, err := h.alertService.GetAlert(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, Response{
+			Success: false,
+			Error:   "Alert not found",
+		})
+		return
+	}
+
+	// Solo actualizar el campo correspondiente según el tipo de alerta
+	if alert.Type == "above" || alert.Type == "below" {
+		if updateReq.TargetPrice != nil {
+			alert.TargetPrice = *updateReq.TargetPrice
+		} else {
+			c.JSON(http.StatusBadRequest, Response{
+				Success: false,
+				Error:   "target_price is required for price-based alerts",
+			})
+			return
+		}
+	} else if alert.Type == "change" {
+		if updateReq.Percentage != nil {
+			alert.Percentage = *updateReq.Percentage
+		} else {
+			c.JSON(http.StatusBadRequest, Response{
+				Success: false,
+				Error:   "percentage is required for percentage-based alerts",
+			})
+			return
+		}
+	}
+
+	// Si la alerta estaba disparada, resetearla para que pueda activarse de nuevo
+	if alert.LastTriggered != nil {
+		alert.Reset()
+	}
+
+	if err := h.alertService.UpdateAlert(alert); err != nil {
 		c.JSON(http.StatusBadRequest, Response{
 			Success: false,
 			Error:   err.Error(),

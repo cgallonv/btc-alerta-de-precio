@@ -489,9 +489,85 @@ async function resetAlert(alertId) {
     }
 }
 
-// Editar alerta (funcionalidad básica)
-function editAlert(alertId) {
-    showNotification('Función de edición en desarrollo', 'info');
+// Editar alerta - Abrir modal
+async function editAlert(alertId) {
+    try {
+        // Obtener datos de la alerta
+        const response = await apiCall(`/alerts/${alertId}`);
+        const alert = response.data;
+        
+        // Configurar el modal según el tipo de alerta
+        document.getElementById('editAlertId').value = alertId;
+        document.getElementById('editAlertType').value = alert.type;
+        
+        const editValueLabel = document.getElementById('editValueLabel');
+        const editValueHelp = document.getElementById('editValueHelp');
+        const editValueInput = document.getElementById('editValue');
+        
+        if (alert.type === 'above' || alert.type === 'below') {
+            editValueLabel.textContent = 'Precio Objetivo ($)';
+            editValueHelp.textContent = 'Ingresa el nuevo precio objetivo en dólares';
+            editValueInput.value = alert.target_price;
+            editValueInput.step = '0.01';
+            editValueInput.min = '0';
+        } else if (alert.type === 'change') {
+            editValueLabel.textContent = 'Porcentaje de Cambio (%)';
+            editValueHelp.textContent = 'Ingresa el nuevo porcentaje de cambio';
+            editValueInput.value = alert.percentage;
+            editValueInput.step = '0.1';
+            editValueInput.min = '0.1';
+            editValueInput.max = '100';
+        }
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('editAlertModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error loading alert for editing:', error);
+        showNotification('Error al cargar la alerta', 'error');
+    }
+}
+
+// Guardar cambios de la alerta editada
+async function saveEditAlert() {
+    const alertId = document.getElementById('editAlertId').value;
+    const alertType = document.getElementById('editAlertType').value;
+    const newValue = parseFloat(document.getElementById('editValue').value);
+    
+    if (!newValue || newValue <= 0) {
+        showNotification('Por favor ingresa un valor válido', 'error');
+        return;
+    }
+    
+    try {
+        const updateData = {};
+        
+        if (alertType === 'above' || alertType === 'below') {
+            updateData.target_price = newValue;
+        } else if (alertType === 'change') {
+            updateData.percentage = newValue;
+        }
+        
+        await apiCall(`/alerts/${alertId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updateData)
+        });
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editAlertModal'));
+        modal.hide();
+        
+        // Mostrar mensaje de éxito
+        showNotification('✅ Alerta actualizada exitosamente', 'success');
+        
+        // Recargar lista de alertas
+        loadAlerts();
+        
+    } catch (error) {
+        console.error('Error updating alert:', error);
+        showNotification('Error al actualizar la alerta', 'error');
+    }
 }
 
 // Eliminar alerta

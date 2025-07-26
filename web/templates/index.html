@@ -228,6 +228,41 @@
         </div>
     </div>
 
+    <!-- Modal para Editar Alerta -->
+    <div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editAlertModalLabel">
+                        <i class="fas fa-edit"></i> Editar Alerta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editAlertForm">
+                        <div class="mb-3">
+                            <label for="editValue" class="form-label" id="editValueLabel">Nuevo Valor</label>
+                            <input type="number" class="form-control" id="editValue" step="0.01" min="0" required>
+                            <div class="form-text" id="editValueHelp">
+                                Ingresa el nuevo valor para la alerta
+                            </div>
+                        </div>
+                        <input type="hidden" id="editAlertId">
+                        <input type="hidden" id="editAlertType">
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditAlert()">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
