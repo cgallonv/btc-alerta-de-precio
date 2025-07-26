@@ -35,10 +35,13 @@ func main() {
 	// Inicializar servicios
 	bitcoinClient := bitcoin.NewClient()
 	notificationService := notifications.NewService(cfg)
-	alertService := alerts.NewService(db, bitcoinClient, notificationService)
+	alertService := alerts.NewService(db, bitcoinClient, notificationService, cfg)
 
 	// Iniciar el monitoreo de precios
 	go alertService.StartMonitoring(cfg.CheckInterval)
+
+	// Iniciar el monitoreo de porcentaje de cambio
+	go alertService.StartPercentageMonitoring()
 
 	// Configurar y iniciar servidor web
 	if cfg.Environment == "production" {
@@ -78,5 +81,6 @@ func main() {
 	}
 
 	alertService.Stop()
+	alertService.StopPercentageMonitoring()
 	log.Println("Aplicación cerrada correctamente")
 }

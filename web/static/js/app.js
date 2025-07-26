@@ -132,8 +132,8 @@ async function loadCurrentPrice() {
         
         priceElement.textContent = formattedPrice;
         
-        // Actualizar porcentaje de cambio
-        updatePriceChange(oldPrice, newPrice);
+        // Obtener porcentaje de cambio desde la API
+        updatePriceChangeFromAPI();
         
         // Mostrar fuente de datos
         const sourceText = response.data.source ? ` (${response.data.source})` : '';
@@ -180,38 +180,38 @@ async function loadCurrentPrice() {
     }
 }
 
-// Actualizar porcentaje de cambio de precio
-function updatePriceChange(oldPrice, newPrice) {
-    const priceChangeElement = document.getElementById('priceChange');
-    if (!priceChangeElement || !oldPrice || oldPrice === 0) {
-        // Si no hay precio anterior válido, mostrar sin cambio
-        if (priceChangeElement) {
-            priceChangeElement.textContent = '0.00%';
-            priceChangeElement.className = 'price-change neutral';
+// Actualizar porcentaje de cambio desde la API
+async function updatePriceChangeFromAPI() {
+    try {
+        const response = await apiCall('/price/percentage');
+        const percentage = response.data.percentage;
+        
+        const priceChangeElement = document.getElementById('priceChange');
+        if (!priceChangeElement) return;
+        
+        // Formatear el porcentaje
+        const formattedPercentage = percentage > 0 
+            ? `+${percentage.toFixed(2)}%` 
+            : `${percentage.toFixed(2)}%`;
+        
+        priceChangeElement.textContent = formattedPercentage;
+        
+        // Aplicar clase CSS según el cambio
+        priceChangeElement.className = 'price-change';
+        if (percentage > 0) {
+            priceChangeElement.classList.add('positive');
+        } else if (percentage < 0) {
+            priceChangeElement.classList.add('negative');
+        } else {
+            priceChangeElement.classList.add('neutral');
         }
-        return;
+        
+        console.log(`Porcentaje de cambio actualizado desde API: ${formattedPercentage}`);
+        
+    } catch (error) {
+        console.error('Error loading percentage change:', error);
+        // Si falla la API del porcentaje, mantener el valor actual
     }
-    
-    // Calcular porcentaje de cambio
-    const percentageChange = ((newPrice - oldPrice) / oldPrice) * 100;
-    
-    // Formatear el porcentaje
-    const sign = percentageChange >= 0 ? '+' : '';
-    const formattedPercentage = `${sign}${percentageChange.toFixed(2)}%`;
-    
-    // Actualizar el texto
-    priceChangeElement.textContent = formattedPercentage;
-    
-    // Aplicar clase CSS según el cambio
-    if (percentageChange > 0) {
-        priceChangeElement.className = 'price-change positive';
-    } else if (percentageChange < 0) {
-        priceChangeElement.className = 'price-change negative';
-    } else {
-        priceChangeElement.className = 'price-change neutral';
-    }
-    
-    console.log(`Cambio de precio: ${formattedPercentage} (${oldPrice} -> ${newPrice})`);
 }
 
 // Actualizar estadísticas del dashboard

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"btc-alerta-de-precio/config"
 	"btc-alerta-de-precio/internal/bitcoin"
 	"btc-alerta-de-precio/internal/notifications"
 	"btc-alerta-de-precio/internal/storage"
@@ -15,6 +16,7 @@ type Service struct {
 	db                  *storage.Database
 	bitcoinClient       *bitcoin.Client
 	notificationService *notifications.Service
+	config              *config.Config
 
 	// Control del monitoreo
 	isMonitoring  bool
@@ -24,14 +26,25 @@ type Service struct {
 	// Cache del último precio
 	lastPrice    *bitcoin.PriceData
 	lastPriceMux sync.RWMutex
+
+	// Control del monitoreo de porcentaje
+	isPercentageMonitoring  bool
+	percentageStopChannel   chan bool
+	percentageMonitoringMux sync.RWMutex
+
+	// Cache del porcentaje actual
+	currentPercentage    float64
+	currentPercentageMux sync.RWMutex
 }
 
-func NewService(db *storage.Database, bitcoinClient *bitcoin.Client, notificationService *notifications.Service) *Service {
+func NewService(db *storage.Database, bitcoinClient *bitcoin.Client, notificationService *notifications.Service, config *config.Config) *Service {
 	return &Service{
-		db:                  db,
-		bitcoinClient:       bitcoinClient,
-		notificationService: notificationService,
-		stopChannel:         make(chan bool),
+		db:                    db,
+		bitcoinClient:         bitcoinClient,
+		notificationService:   notificationService,
+		config:                config,
+		stopChannel:           make(chan bool),
+		percentageStopChannel: make(chan bool),
 	}
 }
 
@@ -311,4 +324,86 @@ func (s *Service) ResetAlert(alertID uint) error {
 
 	log.Printf("🔄 Alerta reseteada: %s (ID: %d)", alert.Name, alertID)
 	return nil
+}
+
+// StartPercentageMonitoring inicia el monitoreo del porcentaje de cambio de precio
+func (s *Service) StartPercentageMonitoring() {
+	s.percentageMonitoringMux.Lock()
+	defer s.percentageMonitoringMux.Unlock()
+
+	if s.isPercentageMonitoring {
+		log.Println("El monitoreo de porcentaje ya está activo")
+		return
+	}
+
+	s.isPercentageMonitoring = true
+	log.Printf("Iniciando monitoreo de porcentaje de cambio cada %v", s.config.PercentageUpdateInterval)
+
+	go s.percentageMonitoringLoop()
+}
+
+// StopPercentageMonitoring detiene el monitoreo del porcentaje de cambio
+func (s *Service) StopPercentageMonitoring() {
+	s.percentageMonitoringMux.Lock()
+	defer s.percentageMonitoringMux.Unlock()
+
+	if !s.isPercentageMonitoring {
+		return
+	}
+
+	log.Println("Deteniendo monitoreo de porcentaje...")
+	s.isPercentageMonitoring = false
+	s.percentageStopChannel <- true
+}
+
+// IsPercentageMonitoring retorna si el monitoreo de porcentaje está activo
+func (s *Service) IsPercentageMonitoring() bool {
+	s.percentageMonitoringMux.RLock()
+	defer s.percentageMonitoringMux.RUnlock()
+	return s.isPercentageMonitoring
+}
+
+// percentageMonitoringLoop es el loop principal del monitoreo de porcentaje
+func (s *Service) percentageMonitoringLoop() {
+	ticker := time.NewTicker(s.config.PercentageUpdateInterval)
+	defer ticker.Stop()
+
+	// Primera verificación inmediata
+	s.updatePercentageFromBinance()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.updatePercentageFromBinance()
+		case <-s.percentageStopChannel:
+			log.Println("Monitoreo de porcentaje detenido")
+			return
+		}
+	}
+}
+
+// updatePercentageFromBinance actualiza el porcentaje de cambio desde Binance
+func (s *Service) updatePercentageFromBinance() {
+	// Usar directamente el método getBinancePrice para obtener datos específicos de Binance
+	priceData, err := s.bitcoinClient.GetCurrentPrice()
+	if err != nil {
+		log.Printf("Error obteniendo datos de porcentaje de Binance: %v", err)
+		return
+	}
+
+	// Solo actualizar si la fuente es Binance (que tiene datos de porcentaje)
+	if priceData.Source == "Binance" {
+		s.currentPercentageMux.Lock()
+		s.currentPercentage = priceData.PriceChangePercent
+		s.currentPercentageMux.Unlock()
+
+		log.Printf("📈 Porcentaje de cambio actualizado: %s", priceData.FormatPriceChange())
+	}
+}
+
+// GetCurrentPercentage retorna el porcentaje de cambio actual
+func (s *Service) GetCurrentPercentage() float64 {
+	s.currentPercentageMux.RLock()
+	defer s.currentPercentageMux.RUnlock()
+	return s.currentPercentage
 }

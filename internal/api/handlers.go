@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -47,6 +48,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		// Bitcoin price
 		api.GET("/price", h.getCurrentPrice)
 		api.GET("/price/history", h.getPriceHistory)
+		api.GET("/price/percentage", h.getCurrentPercentage)
 
 		// Alerts
 		api.GET("/alerts", h.getAlerts)
@@ -114,6 +116,18 @@ func (h *Handler) getPriceHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Data:    history,
+	})
+}
+
+func (h *Handler) getCurrentPercentage(c *gin.Context) {
+	percentage := h.alertService.GetCurrentPercentage()
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: map[string]interface{}{
+			"percentage": percentage,
+			"formatted":  fmt.Sprintf("%+.2f%%", percentage),
+		},
 	})
 }
 
