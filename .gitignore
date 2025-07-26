@@ -1,0 +1,12 @@
+ # Binarios compilados
+    btc-price-alert
+    *.exe
+
+    # Base de datos local
+    alerts.db
+
+    # Archivos de entorno (contienen secretos)
+    .env
+
+    # Archivos del sistema operativo
+    .DS_Store
