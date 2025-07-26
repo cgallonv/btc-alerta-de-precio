@@ -293,3 +293,22 @@ func (s *Service) TestAlert(id uint) error {
 
 	return s.notificationService.SendAlert(notificationData)
 }
+
+// ResetAlert resetea una alerta para que pueda dispararse de nuevo
+func (s *Service) ResetAlert(alertID uint) error {
+	alert, err := s.db.GetAlert(alertID)
+	if err != nil {
+		return fmt.Errorf("alert not found: %w", err)
+	}
+
+	// Resetear la alerta usando el método del modelo
+	alert.Reset()
+
+	// Guardar los cambios en la base de datos
+	if err := s.db.UpdateAlert(alert); err != nil {
+		return fmt.Errorf("failed to reset alert: %w", err)
+	}
+
+	log.Printf("🔄 Alerta reseteada: %s (ID: %d)", alert.Name, alertID)
+	return nil
+}

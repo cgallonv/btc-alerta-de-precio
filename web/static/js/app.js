@@ -342,8 +342,14 @@ function displayAlerts(alerts) {
                     <div>
                         <h6 class="card-title">
                             <i class="fas fa-bell"></i> ${alert.name}
-                            <span class="badge ${alert.is_active ? 'bg-success' : 'bg-secondary'} ms-2">
-                                ${alert.is_active ? 'Activa' : 'Inactiva'}
+                            <span class="badge ${
+                                alert.last_triggered ? 'bg-warning' : 
+                                alert.is_active ? 'bg-success' : 'bg-secondary'
+                            } ms-2">
+                                ${
+                                    alert.last_triggered ? 'Disparada' : 
+                                    alert.is_active ? 'Activa' : 'Inactiva'
+                                }
                             </span>
                         </h6>
                         <p class="card-text text-muted mb-1">
@@ -382,6 +388,11 @@ function displayAlerts(alerts) {
                                 title="${alert.is_active ? 'Desactivar' : 'Activar'}">
                             <i class="fas fa-power-off"></i>
                         </button>
+                        ${alert.last_triggered ? 
+                            `<button class="btn btn-outline-warning" onclick="resetAlert(${alert.id})" title="Resetear">
+                                <i class="fas fa-redo"></i>
+                            </button>` : ''
+                        }
                         <button class="btn btn-outline-info" onclick="editAlert(${alert.id})" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -461,6 +472,20 @@ async function toggleAlert(alertId) {
         loadAlerts();
     } catch (error) {
         console.error('Error toggling alert:', error);
+    }
+}
+
+// Resetear alerta para que pueda dispararse de nuevo
+async function resetAlert(alertId) {
+    if (confirm('¿Estás seguro de que quieres resetear esta alerta? Podrá dispararse de nuevo cuando se cumpla la condición.')) {
+        try {
+            await apiCall(`/alerts/${alertId}/reset`, { method: 'POST' });
+            showNotification('🔄 Alerta reseteada exitosamente', 'success');
+            loadAlerts();
+        } catch (error) {
+            console.error('Error resetting alert:', error);
+            showNotification('Error al resetear la alerta', 'error');
+        }
     }
 }
 

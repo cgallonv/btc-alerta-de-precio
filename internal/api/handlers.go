@@ -50,6 +50,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		api.DELETE("/alerts/:id", h.deleteAlert)
 		api.POST("/alerts/:id/toggle", h.toggleAlert)
 		api.POST("/alerts/:id/test", h.testAlert)
+		api.POST("/alerts/:id/reset", h.resetAlert)
 
 		// Stats
 		api.GET("/stats", h.getStats)
@@ -281,6 +282,30 @@ func (h *Handler) testAlert(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Test notification sent successfully",
+	})
+}
+
+func (h *Handler) resetAlert(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error:   "Invalid alert ID",
+		})
+		return
+	}
+
+	if err := h.alertService.ResetAlert(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Alert reset successfully",
 	})
 }
 

@@ -69,6 +69,11 @@ func (a *Alert) ShouldTrigger(currentPrice float64, previousPrice float64) bool 
 		return false
 	}
 
+	// One-Shot: Solo disparar si nunca se ha activado antes
+	if a.LastTriggered != nil {
+		return false
+	}
+
 	switch a.Type {
 	case "above":
 		return currentPrice >= a.TargetPrice
@@ -102,6 +107,12 @@ func (a *Alert) MarkTriggered() {
 	now := time.Now()
 	a.LastTriggered = &now
 	a.TriggerCount++
+}
+
+// ResetAlert resetea una alerta para poder dispararse de nuevo
+func (a *Alert) Reset() {
+	a.LastTriggered = nil
+	// TriggerCount se mantiene como historial
 }
 
 // Validaciones
