@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os/exec"
-	"runtime"
 	"time"
 
 	"btc-alerta-de-precio/config"
@@ -45,14 +43,6 @@ func (s *Service) SendAlert(data *NotificationData) error {
 		if err := s.sendEmail(data); err != nil {
 			log.Printf("Error enviando email: %v", err)
 			errors = append(errors, fmt.Errorf("email: %w", err))
-		}
-	}
-
-	// Enviar notificación de escritorio
-	if s.config.EnableDesktopNotifications && data.Alert.EnableDesktop {
-		if err := s.sendDesktopNotification(data); err != nil {
-			log.Printf("Error enviando notificación de escritorio: %v", err)
-			errors = append(errors, fmt.Errorf("desktop: %w", err))
 		}
 	}
 
@@ -144,115 +134,6 @@ func (s *Service) sendEmail(data *NotificationData) error {
 	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
 	return d.DialAndSend(m)
-}
-
-func (s *Service) sendDesktopNotification(data *NotificationData) error {
-	title := data.Title
-	message := fmt.Sprintf("%s\nPrecio actual: $%.2f", data.Message, data.Price)
-
-	switch runtime.GOOS {
-	case "darwin": // macOS
-		return s.sendMacOSNotification(title, message)
-	case "linux":
-		return s.sendLinuxNotification(title, message)
-	case "windows":
-		return s.sendWindowsNotification(title, message)
-	default:
-		return fmt.Errorf("desktop notifications not supported on %s", runtime.GOOS)
-	}
-}
-
-func (s *Service) sendMacOSNotification(title, message string) error {
-	script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`, message, title)
-	cmd := exec.Command("osascript", "-e", script)
-	return cmd.Run()
-}
-
-func (s *Service) sendLinuxNotification(title, message string) error {
-	// Intentar con notify-send (más común)
-	cmd := exec.Command("notify-send", title, message, "-i", "dialog-information")
-	if err := cmd.Run(); err != nil {
-		// Si falla, intentar con zenity
-		cmd = exec.Command("zenity", "--info", "--title="+title, "--text="+message)
-		return cmd.Run()
-	}
-	return nil
-}
-
-func (s *Service) sendWindowsNotification(title, message string) error {
-	// Usar PowerShell para mostrar notificación en Windows
-	script := fmt.Sprintf(`
-		Add-Type -AssemblyName System.Windows.Forms
-		$notification = New-Object System.Windows.Forms.NotifyIcon
-		$notification.Icon = [System.Drawing.SystemIcons]::Information
-		$notification.BalloonTipTitle = "%s"
-		$notification.BalloonTipText = "%s"
-		$notification.Visible = $true
-		$notification.ShowBalloonTip(5000)
-	`, title, message)
-
-	cmd := exec.Command("powershell", "-Command", script)
-	return cmd.Run()
-}
-
-// Método para testing
-func (s *Service) TestNotifications() error {
-	log.Println("🧪 Probando todas las notificaciones...")
-
-	testData := &NotificationData{
-		Title:   "🧪 Test de Notificación",
-		Message: "Esta es una notificación de prueba del sistema de alertas de Bitcoin.",
-		Price:   50000.00,
-		Alert: &storage.Alert{
-			Name:          "Test Alert",
-			Email:         s.config.FromEmail,
-			EnableEmail:   true,
-			EnableDesktop: true,
-		},
-	}
-
-	var errors []error
-
-	// Test Email
-	if s.config.EnableEmailNotifications {
-		log.Println("📧 Probando notificación por email...")
-		if err := s.SendAlert(testData); err != nil {
-			log.Printf("❌ Error en email: %v", err)
-			errors = append(errors, fmt.Errorf("email: %w", err))
-		} else {
-			log.Println("✅ Email enviado correctamente")
-		}
-	}
-
-	// Test Desktop
-	if s.config.EnableDesktopNotifications {
-		log.Println("🖥️ Probando notificación de escritorio...")
-		if err := s.sendDesktopNotification(testData); err != nil {
-			log.Printf("❌ Error en desktop: %v", err)
-			errors = append(errors, fmt.Errorf("desktop: %w", err))
-		} else {
-			log.Println("✅ Notificación de escritorio enviada")
-		}
-	}
-
-	// Test Telegram
-	if s.config.EnableTelegramNotifications {
-		log.Println("📱 Probando notificación de Telegram...")
-		if err := s.TestTelegramNotification(); err != nil {
-			log.Printf("❌ Error en Telegram: %v", err)
-			errors = append(errors, fmt.Errorf("telegram: %w", err))
-		} else {
-			log.Println("✅ Telegram enviado correctamente")
-		}
-	}
-
-	if len(errors) > 0 {
-		log.Printf("⚠️ Se encontraron %d errores en las pruebas", len(errors))
-		return errors[0]
-	}
-
-	log.Println("🎉 ¡Todas las notificaciones funcionan correctamente!")
-	return nil
 }
 
 // Web Push Notifications (implementación completa)

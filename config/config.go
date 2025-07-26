@@ -31,7 +31,6 @@ type Config struct {
 	FromEmail    string
 
 	// Notificaciones
-	EnableDesktopNotifications  bool
 	EnableEmailNotifications    bool
 	EnableWebPushNotifications  bool
 	EnableTelegramNotifications bool
@@ -70,7 +69,6 @@ func Load() (*Config, error) {
 		FromEmail:    getEnv("FROM_EMAIL", ""),
 
 		// Notification settings
-		EnableDesktopNotifications:  getEnvBool("ENABLE_DESKTOP_NOTIFICATIONS", true),
 		EnableEmailNotifications:    getEnvBool("ENABLE_EMAIL_NOTIFICATIONS", true),
 		EnableWebPushNotifications:  getEnvBool("ENABLE_WEB_PUSH_NOTIFICATIONS", true),
 		EnableTelegramNotifications: getEnvBool("ENABLE_TELEGRAM_NOTIFICATIONS", false),
