@@ -53,7 +53,103 @@ go run main.go
 http://localhost:8080
 ```
 
-**�� ¡La interfaz se actualiza automáticamente cada 15 segundos!** No necesitas refrescar la página.
+**🔄 ¡La interfaz se actualiza automáticamente cada 15 segundos!** No necesitas refrescar la página.
+
+### 🪟 Ejecución en Windows con PowerShell
+
+#### 🚨 Problema Común: Script se abre en Notepad
+
+Si al ejecutar `.\scripts\dev.ps1 dev` se abre el archivo en Notepad en lugar de ejecutarse, es debido a la **PowerShell Execution Policy** de Windows.
+
+#### ✅ Soluciones (prueba en este orden):
+
+##### **🥇 Solución 1: Usar PowerShell (no Command Prompt)**
+
+```powershell
+# ❌ Incorrecto - En Command Prompt (cmd):
+.\scripts\dev.ps1 dev
+
+# ✅ Correcto - En PowerShell:
+PowerShell -ExecutionPolicy Bypass -File ".\scripts\dev.ps1" dev
+```
+
+##### **🥈 Solución 2: Cambiar Execution Policy (Recomendado)**
+
+1. **Abrir PowerShell como Administrador**
+2. **Ejecutar este comando:**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+3. **Confirmar con 'Y'**
+4. **Ahora ya puedes usar normalmente:**
+```powershell
+.\scripts\dev.ps1 dev
+```
+
+##### **🥉 Solución 3: Usar Script Batch (.bat)**
+
+Si PowerShell sigue dando problemas, usa el script batch:
+
+```cmd
+# Funciona en cualquier Command Prompt:
+.\scripts\dev.bat dev
+```
+
+#### 🔧 Comandos Disponibles para Windows
+
+| Comando | PowerShell | Batch | Descripción |
+|---------|-----------|-------|-------------|
+| **Ejecutar app** | `.\scripts\dev.ps1 dev` | `.\scripts\dev.bat dev` | Setup completo + ejecutar |
+| **Solo setup** | `.\scripts\dev.ps1 setup` | `.\scripts\dev.bat setup` | Preparar entorno |
+| **Compilar** | `.\scripts\dev.ps1 build` | `.\scripts\dev.bat build` | Crear .exe |
+| **Limpiar** | `.\scripts\dev.ps1 clean` | `.\scripts\dev.bat clean` | Eliminar temporales |
+
+#### 📋 Flujo Completo para Windows
+
+```powershell
+# 1. Navegar al proyecto
+cd E:\tu-ruta\btc-alerta-de-precio
+
+# 2. Descargar cambios (si usas Git)
+git pull origin main
+
+# 3. Ejecutar aplicación (elige una opción):
+
+# Opción A - PowerShell (después de configurar Execution Policy):
+.\scripts\dev.ps1 dev
+
+# Opción B - PowerShell con bypass:
+PowerShell -ExecutionPolicy Bypass -File ".\scripts\dev.ps1" dev
+
+# Opción C - Batch file (siempre funciona):
+.\scripts\dev.bat dev
+
+# Opción D - Manual:
+go mod tidy
+go run main.go
+```
+
+#### 🛠️ Verificar Instalación
+
+```powershell
+# Verificar que Go está instalado:
+go version
+
+# Verificar que el servidor está corriendo:
+curl http://localhost:8080/api/v1/health
+
+# O abrir en navegador:
+start http://localhost:8080
+```
+
+#### ⚠️ Troubleshooting Windows
+
+| Problema | Solución |
+|----------|----------|
+| **"go command not found"** | Instalar Go desde https://golang.org/dl/ |
+| **"Port 8080 already in use"** | `netstat -ano \| findstr :8080` y `taskkill /PID [número] /F` |
+| **Script abre en Notepad** | Usar PowerShell en lugar de CMD, o cambiar Execution Policy |
+| **"Access denied"** | Ejecutar PowerShell como Administrador |
 
 ### Configuración de Email
 
