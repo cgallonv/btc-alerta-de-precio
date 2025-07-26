@@ -106,9 +106,12 @@
                 <i class="fab fa-bitcoin"></i> Bitcoin Price Alert
             </a>
             <div class="navbar-nav ms-auto">
-                <span class="nav-text text-white">
+                <span class="nav-text text-white me-3">
                     <i class="fas fa-chart-line"></i> Actualización cada 15s
                 </span>
+                <button id="webPushToggle" class="btn btn-success btn-sm" style="display: none;">
+                    <i class="fas fa-bell"></i> Activar Web Push
+                </button>
             </div>
         </div>
     </nav>
@@ -221,6 +224,12 @@
                                     <input class="form-check-input" type="checkbox" id="enableTelegram" checked>
                                     <label class="form-check-label">
                                         <i class="fab fa-telegram text-info"></i> Notificación por Telegram
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableWebPush" checked>
+                                    <label class="form-check-label">
+                                        <i class="fas fa-globe text-warning"></i> Notificación Web Push (Chrome)
                                     </label>
                                 </div>
                             </div>

@@ -1,6 +1,9 @@
 // Variables globales
 let priceChart;
 let currentPrice = 0;
+let webPushSupported = false;
+let webPushSubscription = null;
+let vapidPublicKey = null;
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
@@ -16,6 +19,9 @@ function initializeApp() {
         priceChangeElement.textContent = '0.00%';
         priceChangeElement.className = 'price-change neutral';
     }
+    
+    // Inicializar Web Push notifications
+    initializeWebPush();
     
     loadCurrentPrice();
     loadAlerts();
@@ -417,6 +423,9 @@ function displayAlerts(alerts) {
                             ${alert.enable_telegram ? 
                                 '<span class="badge bg-info me-1"><i class="fab fa-telegram"></i> Telegram</span>' : ''
                             }
+                            ${alert.enable_web_push ? 
+                                '<span class="badge bg-warning me-1"><i class="fas fa-globe"></i> Web Push</span>' : ''
+                            }
                         </div>
                         ${alert.trigger_count > 0 ? 
                             `<br><small class="text-info">Activada ${alert.trigger_count} vez${alert.trigger_count > 1 ? 'es' : ''}</small>` : 
@@ -475,6 +484,7 @@ async function createAlert(event) {
         enable_email: document.getElementById('enableEmail').checked,
         enable_desktop: document.getElementById('enableDesktop').checked,
         enable_telegram: document.getElementById('enableTelegram').checked,
+        enable_web_push: document.getElementById('enableWebPush').checked,
         is_active: true
     };
     
@@ -666,4 +676,198 @@ function startPriceUpdates() {
     setInterval(() => {
         loadAlerts();
     }, 30000); // 30 segundos
+}
+
+// ===========================================
+// WEB PUSH NOTIFICATIONS
+// ===========================================
+
+// Inicializar Web Push notifications
+async function initializeWebPush() {
+    console.log('🔄 Inicializando Web Push notifications...');
+
+    // Verificar soporte del navegador
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.log('❌ Web Push no soportado por este navegador');
+        webPushSupported = false;
+        return;
+    }
+
+    webPushSupported = true;
+    console.log('✅ Web Push soportado');
+
+    try {
+        // Registrar Service Worker
+        const registration = await navigator.serviceWorker.register('/static/sw.js');
+        console.log('✅ Service Worker registrado:', registration);
+
+        // Obtener VAPID public key del servidor
+        await loadVAPIDPublicKey();
+
+        // Verificar subscripción existente
+        await checkExistingSubscription(registration);
+
+        // Mostrar botón de notificaciones
+        updateWebPushUI();
+
+    } catch (error) {
+        console.error('❌ Error inicializando Web Push:', error);
+        webPushSupported = false;
+    }
+}
+
+// Cargar VAPID public key del servidor
+async function loadVAPIDPublicKey() {
+    try {
+        const response = await apiCall('/webpush/vapid-public-key');
+        vapidPublicKey = response.data.publicKey;
+        console.log('✅ VAPID Public Key cargada');
+    } catch (error) {
+        console.error('❌ Error cargando VAPID key:', error);
+        throw error;
+    }
+}
+
+// Verificar subscripción existente
+async function checkExistingSubscription(registration) {
+    try {
+        webPushSubscription = await registration.pushManager.getSubscription();
+        if (webPushSubscription) {
+            console.log('✅ Subscripción Web Push existente encontrada');
+        } else {
+            console.log('ℹ️ No hay subscripción Web Push existente');
+        }
+    } catch (error) {
+        console.error('❌ Error verificando subscripción:', error);
+    }
+}
+
+// Solicitar permisos y suscribirse a Web Push
+async function subscribeToWebPush() {
+    if (!webPushSupported) {
+        showNotification('Web Push no soportado por este navegador', 'error');
+        return false;
+    }
+
+    try {
+        // Solicitar permiso de notificaciones
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            showNotification('Permisos de notificación denegados', 'error');
+            return false;
+        }
+
+        // Obtener registration del Service Worker
+        const registration = await navigator.serviceWorker.ready;
+
+        // Crear subscripción
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+        });
+
+        // Enviar subscripción al servidor
+        const response = await apiCall('/webpush/subscribe', {
+            method: 'POST',
+            body: JSON.stringify({
+                endpoint: subscription.endpoint,
+                p256dh: arrayBufferToBase64(subscription.getKey('p256dh')),
+                auth: arrayBufferToBase64(subscription.getKey('auth')),
+                user_id: 'anonymous' // TODO: Implementar usuarios
+            })
+        });
+
+        if (response.success) {
+            webPushSubscription = subscription;
+            showNotification('✅ Notificaciones Web Push activadas', 'success');
+            updateWebPushUI();
+            return true;
+        } else {
+            throw new Error(response.error || 'Error del servidor');
+        }
+
+    } catch (error) {
+        console.error('❌ Error suscribiendo a Web Push:', error);
+        showNotification('Error activando notificaciones: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Cancelar subscripción a Web Push
+async function unsubscribeFromWebPush() {
+    if (!webPushSubscription) {
+        showNotification('No hay subscripción activa', 'warning');
+        return false;
+    }
+
+    try {
+        // Cancelar subscripción en el navegador
+        await webPushSubscription.unsubscribe();
+
+        // Notificar al servidor
+        await apiCall('/webpush/unsubscribe', {
+            method: 'DELETE',
+            body: JSON.stringify({
+                endpoint: webPushSubscription.endpoint
+            })
+        });
+
+        webPushSubscription = null;
+        showNotification('Notificaciones Web Push desactivadas', 'info');
+        updateWebPushUI();
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error cancelando subscripción Web Push:', error);
+        showNotification('Error desactivando notificaciones: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// Actualizar interfaz de usuario para Web Push
+function updateWebPushUI() {
+    const webPushButton = document.getElementById('webPushToggle');
+    if (!webPushButton) return;
+
+    if (!webPushSupported) {
+        webPushButton.style.display = 'none';
+        return;
+    }
+
+    webPushButton.style.display = 'block';
+    
+    if (webPushSubscription) {
+        webPushButton.textContent = '🔕 Desactivar Web Push';
+        webPushButton.className = 'btn btn-warning btn-sm';
+        webPushButton.onclick = unsubscribeFromWebPush;
+    } else {
+        webPushButton.textContent = '🔔 Activar Web Push';
+        webPushButton.className = 'btn btn-success btn-sm';
+        webPushButton.onclick = subscribeToWebPush;
+    }
+}
+
+// Funciones auxiliares
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
 } 

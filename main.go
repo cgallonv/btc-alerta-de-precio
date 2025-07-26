@@ -34,7 +34,7 @@ func main() {
 
 	// Inicializar servicios
 	bitcoinClient := bitcoin.NewClient()
-	notificationService := notifications.NewService(cfg)
+	notificationService := notifications.NewService(cfg, db)
 	alertService := alerts.NewService(db, bitcoinClient, notificationService, cfg)
 
 	// Iniciar el monitoreo de precios

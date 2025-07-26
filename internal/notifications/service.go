@@ -14,11 +14,13 @@ import (
 	"btc-alerta-de-precio/config"
 	"btc-alerta-de-precio/internal/storage"
 
+	"github.com/SherClockHolmes/webpush-go"
 	"gopkg.in/gomail.v2"
 )
 
 type Service struct {
 	config *config.Config
+	db     *storage.Database
 }
 
 type NotificationData struct {
@@ -28,9 +30,10 @@ type NotificationData struct {
 	Alert   *storage.Alert
 }
 
-func NewService(cfg *config.Config) *Service {
+func NewService(cfg *config.Config, db *storage.Database) *Service {
 	return &Service{
 		config: cfg,
+		db:     db,
 	}
 }
 
@@ -58,6 +61,20 @@ func (s *Service) SendAlert(data *NotificationData) error {
 		if err := s.sendTelegramNotification(data); err != nil {
 			log.Printf("Error enviando notificación de Telegram: %v", err)
 			errors = append(errors, fmt.Errorf("telegram: %w", err))
+		}
+	}
+
+	// Enviar notificación Web Push
+	if s.config.EnableWebPushNotifications && data.Alert.EnableWebPush {
+		subscriptions, err := s.db.GetActiveWebPushSubscriptions()
+		if err != nil {
+			log.Printf("Error obteniendo subscripciones Web Push: %v", err)
+			errors = append(errors, fmt.Errorf("webpush_fetch: %w", err))
+		} else if len(subscriptions) > 0 {
+			if err := s.SendWebPushNotification(subscriptions, data); err != nil {
+				log.Printf("Error enviando notificación Web Push: %v", err)
+				errors = append(errors, fmt.Errorf("webpush: %w", err))
+			}
 		}
 	}
 
@@ -238,17 +255,94 @@ func (s *Service) TestNotifications() error {
 	return nil
 }
 
-// Web Push Notifications (implementación básica)
+// Web Push Notifications (implementación completa)
 func (s *Service) SendWebPushNotification(subscriptions []storage.WebPushSubscription, data *NotificationData) error {
-	// Nota: Para una implementación completa de Web Push, necesitarías usar una librería
-	// como github.com/SherClockHolmes/webpush-go
-	// Por simplicidad, aquí se proporciona la estructura base
+	if !s.config.EnableWebPushNotifications {
+		return nil
+	}
 
-	log.Printf("Web Push notifications no implementadas completamente. Datos: %+v", data)
-	log.Printf("Subscriptions: %d", len(subscriptions))
+	if s.config.VAPIDPublicKey == "" || s.config.VAPIDPrivateKey == "" {
+		return fmt.Errorf("VAPID keys not configured")
+	}
 
-	// TODO: Implementar envío real de web push notifications
-	// Requiere VAPID keys y manejo de subscriptions de service workers
+	var errors []error
+
+	// Preparar el payload de la notificación
+	payload := map[string]interface{}{
+		"title": data.Title,
+		"body":  fmt.Sprintf("%s\nPrecio actual: $%.2f", data.Message, data.Price),
+		"icon":  "/static/images/bitcoin-icon.png",
+		"badge": "/static/images/bitcoin-badge.png",
+		"data": map[string]interface{}{
+			"price":     data.Price,
+			"alertID":   data.Alert.ID,
+			"alertName": data.Alert.Name,
+			"timestamp": time.Now().Unix(),
+		},
+		"actions": []map[string]string{
+			{
+				"action": "view",
+				"title":  "Ver Dashboard",
+			},
+			{
+				"action": "close",
+				"title":  "Cerrar",
+			},
+		},
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshaling payload: %w", err)
+	}
+
+	for _, subscription := range subscriptions {
+		if !subscription.IsActive {
+			continue
+		}
+
+		err := s.sendWebPushToSubscription(subscription, payloadBytes)
+		if err != nil {
+			log.Printf("Error enviando Web Push a %s: %v", subscription.Endpoint, err)
+			errors = append(errors, err)
+		} else {
+			log.Printf("📨 Web Push enviado exitosamente a: %s", subscription.Endpoint)
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to send to %d subscriptions", len(errors))
+	}
+
+	return nil
+}
+
+func (s *Service) sendWebPushToSubscription(subscription storage.WebPushSubscription, payload []byte) error {
+	// Crear la subscripción
+	sub := &webpush.Subscription{
+		Endpoint: subscription.Endpoint,
+		Keys: webpush.Keys{
+			P256dh: subscription.P256dh,
+			Auth:   subscription.Auth,
+		},
+	}
+
+	// Enviar la notificación usando la función global
+	resp, err := webpush.SendNotification(payload, sub, &webpush.Options{
+		Subscriber:      s.config.VAPIDSubject,
+		VAPIDPublicKey:  s.config.VAPIDPublicKey,
+		VAPIDPrivateKey: s.config.VAPIDPrivateKey,
+		TTL:             3600, // 1 hora
+	})
+	if err != nil {
+		return fmt.Errorf("error sending web push: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Verificar respuesta
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("web push server returned status: %d", resp.StatusCode)
+	}
 
 	return nil
 }

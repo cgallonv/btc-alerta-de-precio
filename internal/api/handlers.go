@@ -63,6 +63,11 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		// Stats
 		api.GET("/stats", h.getStats)
 
+		// Web Push Subscriptions
+		api.POST("/webpush/subscribe", h.subscribeWebPush)
+		api.DELETE("/webpush/unsubscribe", h.unsubscribeWebPush)
+		api.GET("/webpush/vapid-public-key", h.getVAPIDPublicKey)
+
 		// System
 		api.GET("/health", h.healthCheck)
 	}
@@ -390,6 +395,100 @@ func (h *Handler) healthCheck(c *gin.Context) {
 		Data: gin.H{
 			"status":     "ok",
 			"monitoring": h.alertService.IsMonitoring(),
+		},
+	})
+}
+
+// Web Push handlers
+func (h *Handler) subscribeWebPush(c *gin.Context) {
+	var req struct {
+		Endpoint string `json:"endpoint" binding:"required"`
+		P256dh   string `json:"p256dh" binding:"required"`
+		Auth     string `json:"auth" binding:"required"`
+		UserID   string `json:"user_id"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	subscription := &storage.WebPushSubscription{
+		Endpoint: req.Endpoint,
+		P256dh:   req.P256dh,
+		Auth:     req.Auth,
+		UserID:   req.UserID,
+		IsActive: true,
+	}
+
+	db, err := storage.NewDatabase("alerts.db") // TODO: Usar configuración
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   "Database connection failed",
+		})
+		return
+	}
+
+	if err := db.SaveWebPushSubscription(subscription); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Web Push subscription saved successfully",
+	})
+}
+
+func (h *Handler) unsubscribeWebPush(c *gin.Context) {
+	var req struct {
+		Endpoint string `json:"endpoint" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	db, err := storage.NewDatabase("alerts.db") // TODO: Usar configuración
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   "Database connection failed",
+		})
+		return
+	}
+
+	if err := db.RemoveWebPushSubscription(req.Endpoint); err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Web Push subscription removed successfully",
+	})
+}
+
+func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
+	// TODO: Obtener la clave desde la configuración
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data: gin.H{
+			"publicKey": "BI3enbbkk8hud4SXGXriy9wPEBovCg210LDckVrM5ldTzkbXCwEGZLGegjhwkTrOd9z152h4iLtTCrqOP_UzV-M",
 		},
 	})
 }
