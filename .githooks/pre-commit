@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Git Pre-commit Hook para BTC Price Alert
+# Este hook se ejecuta automáticamente antes de cada commit
+
+echo "🔍 Ejecutando verificaciones pre-commit..."
+
+# Verificar si existen archivos que no deberían estar
+BLOCKED_FILES=(
+    "btc-price-alert"
+    "btc-price-alert.exe"
+    "alerts.db"
+    ".env"
+)
+
+for file in "${BLOCKED_FILES[@]}"; do
+    if git diff --cached --name-only | grep -q "^$file$"; then
+        echo "❌ ERROR: Intentando commitear archivo bloqueado: $file"
+        echo "💡 Ejecuta: git restore --staged $file"
+        exit 1
+    fi
+done
+
+# Verificar archivos grandes en staging
+echo "📏 Verificando tamaños de archivos..."
+git diff --cached --name-only | while read file; do
+    if [ -f "$file" ]; then
+        size=$(wc -c < "$file" 2>/dev/null || echo 0)
+        # 1MB = 1048576 bytes
+        if [ "$size" -gt 1048576 ]; then
+            echo "❌ ERROR: Archivo muy grande para commit: $file ($(echo "scale=2; $size/1048576" | bc)MB)"
+            echo "💡 ¿Debería estar en .gitignore?"
+            exit 1
+        fi
+    fi
+done
+
+# Verificar formato de código Go
+echo "🎨 Verificando formato de código..."
+if [ -n "$(git diff --cached --name-only | grep '\.go$')" ]; then
+    # Verificar que el código esté formateado
+    unformatted_files=$(git diff --cached --name-only | grep '\.go$' | xargs gofmt -l)
+    if [ -n "$unformatted_files" ]; then
+        echo "❌ ERROR: Archivos Go no formateados:"
+        echo "$unformatted_files"
+        echo "💡 Ejecuta: go fmt ./..."
+        exit 1
+    fi
+fi
+
+# Verificar que las dependencias estén actualizadas
+echo "📦 Verificando dependencias..."
+if git diff --cached --name-only | grep -q "go.mod"; then
+    if ! go mod verify; then
+        echo "❌ ERROR: go.mod corrupto o dependencias inválidas"
+        echo "💡 Ejecuta: go mod tidy"
+        exit 1
+    fi
+fi
+
+# Todo OK
+echo "✅ Verificaciones pre-commit completadas exitosamente"
+echo "🚀 Procediendo con el commit..." 
