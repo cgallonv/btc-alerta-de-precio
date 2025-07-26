@@ -14,6 +14,29 @@
             font-weight: bold;
             transition: all 0.3s ease;
             position: relative;
+            white-space: nowrap;
+            word-break: keep-all;
+            overflow-wrap: normal;
+        }
+        
+        .price-change {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: -8px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .price-change.positive {
+            color: #28a745;
+        }
+        
+        .price-change.negative {
+            color: #dc3545;
+        }
+        
+        .price-change.neutral {
+            color: #6c757d;
         }
         .alert-card { transition: transform 0.2s; }
         .alert-card:hover { transform: translateY(-2px); }
@@ -98,6 +121,7 @@
                     <div class="card-body">
                         <i class="fas fa-bitcoin fa-2x bitcoin-color mb-2"></i>
                         <h4 class="price-display bitcoin-color" id="currentPrice">$0.00</h4>
+                        <div class="price-change" id="priceChange">+0.00%</div>
                         <p class="text-muted">Precio Actual</p>
                     </div>
                 </div>

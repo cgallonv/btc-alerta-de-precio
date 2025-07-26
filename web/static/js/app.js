@@ -10,6 +10,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
+    // Inicializar elemento de cambio de precio
+    const priceChangeElement = document.getElementById('priceChange');
+    if (priceChangeElement) {
+        priceChangeElement.textContent = '0.00%';
+        priceChangeElement.className = 'price-change neutral';
+    }
+    
     loadCurrentPrice();
     loadAlerts();
     loadPriceHistory();
@@ -125,6 +132,9 @@ async function loadCurrentPrice() {
         
         priceElement.textContent = formattedPrice;
         
+        // Actualizar porcentaje de cambio
+        updatePriceChange(oldPrice, newPrice);
+        
         // Mostrar fuente de datos
         const sourceText = response.data.source ? ` (${response.data.source})` : '';
         updateElement.textContent = 
@@ -168,6 +178,40 @@ async function loadCurrentPrice() {
             priceElement.style.opacity = '1';
         }
     }
+}
+
+// Actualizar porcentaje de cambio de precio
+function updatePriceChange(oldPrice, newPrice) {
+    const priceChangeElement = document.getElementById('priceChange');
+    if (!priceChangeElement || !oldPrice || oldPrice === 0) {
+        // Si no hay precio anterior válido, mostrar sin cambio
+        if (priceChangeElement) {
+            priceChangeElement.textContent = '0.00%';
+            priceChangeElement.className = 'price-change neutral';
+        }
+        return;
+    }
+    
+    // Calcular porcentaje de cambio
+    const percentageChange = ((newPrice - oldPrice) / oldPrice) * 100;
+    
+    // Formatear el porcentaje
+    const sign = percentageChange >= 0 ? '+' : '';
+    const formattedPercentage = `${sign}${percentageChange.toFixed(2)}%`;
+    
+    // Actualizar el texto
+    priceChangeElement.textContent = formattedPercentage;
+    
+    // Aplicar clase CSS según el cambio
+    if (percentageChange > 0) {
+        priceChangeElement.className = 'price-change positive';
+    } else if (percentageChange < 0) {
+        priceChangeElement.className = 'price-change negative';
+    } else {
+        priceChangeElement.className = 'price-change neutral';
+    }
+    
+    console.log(`Cambio de precio: ${formattedPercentage} (${oldPrice} -> ${newPrice})`);
 }
 
 // Actualizar estadísticas del dashboard
