@@ -1,0 +1,302 @@
+# 🚨 Bitcoin Price Alert
+
+Una aplicación completa en Go para monitorear el precio de Bitcoin y recibir alertas personalizadas mediante email y notificaciones de escritorio.
+
+## ✨ Características
+
+- 📊 **Monitoreo en tiempo real** del precio de Bitcoin
+- 🚨 **Alertas personalizables**: precio por encima/debajo de un valor o cambio porcentual
+- 📧 **Notificaciones por email** con diseño atractivo
+- 💻 **Notificaciones de escritorio** (macOS, Linux, Windows)
+- 🌐 **Interfaz web moderna** para gestionar alertas
+- 📈 **Historial de precios** con gráficos interactivos
+- 🐳 **Docker ready** para despliegue fácil en la nube
+- 💾 **Base de datos SQLite** liviana y confiable
+- 🔄 **APIs redundantes** (CoinDesk + CoinGecko como backup)
+
+## 🚀 Instalación y Uso
+
+### Prerrequisitos
+
+- Go 1.21 o superior
+- Git
+
+### Instalación Local
+
+1. **Clonar el repositorio:**
+```bash
+git clone <tu-repo>
+cd btc-alerta-de-precio
+```
+
+2. **Instalar dependencias:**
+```bash
+go mod tidy
+```
+
+3. **Configurar variables de entorno:**
+```bash
+cp .env.example .env
+# Editar .env con tus configuraciones
+```
+
+4. **Ejecutar la aplicación:**
+```bash
+go run main.go
+```
+
+5. **Abrir en el navegador:**
+```
+http://localhost:8080
+```
+
+### Configuración de Email
+
+Para habilitar notificaciones por email, configura las siguientes variables en tu archivo `.env`:
+
+```env
+# Gmail (recomendado)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=tu-email@gmail.com
+SMTP_PASSWORD=tu-app-password  # No tu contraseña normal
+FROM_EMAIL=tu-email@gmail.com
+```
+
+**Nota importante:** Para Gmail, necesitas generar una "App Password" en tu cuenta de Google con 2FA habilitado.
+
+### Variables de Entorno
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|-------------------|
+| `PORT` | Puerto del servidor web | `8080` |
+| `ENVIRONMENT` | Entorno (development/production) | `development` |
+| `DATABASE_PATH` | Ruta de la base de datos SQLite | `alerts.db` |
+| `CHECK_INTERVAL` | Intervalo de verificación de precios | `30s` |
+| `SMTP_HOST` | Servidor SMTP para emails | `smtp.gmail.com` |
+| `SMTP_PORT` | Puerto SMTP | `587` |
+| `SMTP_USERNAME` | Usuario SMTP | - |
+| `SMTP_PASSWORD` | Contraseña SMTP | - |
+| `FROM_EMAIL` | Email remitente | - |
+
+## 🐳 Despliegue con Docker
+
+### Build y Run Local
+
+```bash
+# Construir imagen
+docker build -t btc-price-alert .
+
+# Ejecutar contenedor
+docker run -d \
+  --name btc-alerts \
+  -p 8080:8080 \
+  -v $(pwd)/data:/app/data \
+  -e SMTP_USERNAME=tu-email@gmail.com \
+  -e SMTP_PASSWORD=tu-app-password \
+  -e FROM_EMAIL=tu-email@gmail.com \
+  btc-price-alert
+```
+
+### Docker Compose
+
+```bash
+# Iniciar servicios
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Detener servicios
+docker-compose down
+```
+
+### Despliegue en la Nube
+
+#### Heroku
+
+```bash
+# Instalar Heroku CLI y login
+heroku create tu-app-btc-alerts
+
+# Configurar variables de entorno
+heroku config:set SMTP_USERNAME=tu-email@gmail.com
+heroku config:set SMTP_PASSWORD=tu-app-password
+heroku config:set FROM_EMAIL=tu-email@gmail.com
+
+# Desplegar
+git push heroku main
+```
+
+#### DigitalOcean App Platform
+
+1. Fork este repositorio
+2. Conecta tu cuenta de GitHub a DigitalOcean
+3. Crea una nueva App desde tu repositorio
+4. Configura las variables de entorno
+5. ¡Despliega!
+
+## 🎯 Uso de la Aplicación
+
+### 1. Crear Alertas
+
+1. Abre la interfaz web en `http://localhost:8080`
+2. Completa el formulario "Nueva Alerta":
+   - **Nombre**: Identifica tu alerta
+   - **Tipo**: Elige entre:
+     - **Precio por encima de**: Se activa cuando BTC supera un precio
+     - **Precio por debajo de**: Se activa cuando BTC cae por debajo de un precio
+     - **Cambio porcentual**: Se activa con cambios significativos
+   - **Email**: Para recibir notificaciones
+3. Haz clic en "Crear Alerta"
+
+### 2. Gestionar Alertas
+
+- **👁️ Ver todas las alertas**: En el panel principal
+- **🧪 Probar alerta**: Botón azul para enviar notificación de prueba
+- **⏸️ Activar/Desactivar**: Botón amarillo/verde
+- **✏️ Editar**: Botón azul (próximamente)
+- **🗑️ Eliminar**: Botón rojo
+
+### 3. Monitorear Precios
+
+- **Precio actual**: Se actualiza cada 30 segundos
+- **Gráfico**: Historial de las últimas 24 horas
+- **Estadísticas**: Dashboard con métricas importantes
+
+## 🛠️ API REST
+
+La aplicación expone una API REST completa:
+
+### Endpoints Principales
+
+```bash
+# Obtener precio actual
+GET /api/v1/price
+
+# Historial de precios
+GET /api/v1/price/history?limit=100
+
+# Listar alertas
+GET /api/v1/alerts
+
+# Crear alerta
+POST /api/v1/alerts
+
+# Obtener alerta específica
+GET /api/v1/alerts/{id}
+
+# Actualizar alerta
+PUT /api/v1/alerts/{id}
+
+# Eliminar alerta
+DELETE /api/v1/alerts/{id}
+
+# Activar/desactivar alerta
+POST /api/v1/alerts/{id}/toggle
+
+# Probar alerta
+POST /api/v1/alerts/{id}/test
+
+# Estadísticas
+GET /api/v1/stats
+
+# Health check
+GET /api/v1/health
+```
+
+### Ejemplo de Uso con cURL
+
+```bash
+# Crear una nueva alerta
+curl -X POST http://localhost:8080/api/v1/alerts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "BTC a la luna 🚀",
+    "type": "above",
+    "target_price": 100000,
+    "email": "tu-email@gmail.com",
+    "enable_email": true,
+    "enable_desktop": true
+  }'
+
+# Obtener precio actual
+curl http://localhost:8080/api/v1/price
+```
+
+## 🏗️ Arquitectura
+
+```
+btc-alerta-de-precio/
+├── main.go                 # Punto de entrada
+├── config/                 # Configuración
+├── internal/
+│   ├── api/               # Handlers HTTP
+│   ├── alerts/            # Lógica de alertas
+│   ├── bitcoin/           # Cliente APIs de Bitcoin
+│   ├── notifications/     # Sistema de notificaciones
+│   └── storage/           # Base de datos y modelos
+├── web/
+│   ├── templates/         # Templates HTML
+│   └── static/           # CSS, JS, imágenes
+├── docker/               # Archivos Docker
+└── docs/                # Documentación adicional
+```
+
+## 🧪 Testing
+
+```bash
+# Ejecutar tests
+go test ./...
+
+# Test con coverage
+go test -cover ./...
+
+# Test de integración
+go test -tags=integration ./...
+```
+
+## 📝 Roadmap
+
+- [ ] ✏️ Edición de alertas desde la interfaz web
+- [ ] 🔔 Notificaciones push para navegadores (Web Push)
+- [ ] 📱 Webhooks para integraciones externas
+- [ ] 🏦 Soporte para múltiples criptomonedas
+- [ ] 📊 Métricas y análisis avanzados
+- [ ] 🔐 Autenticación y múltiples usuarios
+- [ ] 📲 Telegram Bot integration
+- [ ] 🎨 Temas personalizables
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 🆘 Soporte
+
+Si tienes problemas o preguntas:
+
+1. **Revisa la documentación** en este README
+2. **Busca en Issues** existentes
+3. **Crea un nuevo Issue** con detalles del problema
+4. **Email**: [tu-email@domain.com]
+
+## 🙏 Agradecimientos
+
+- **CoinDesk API** - Datos de precios principales
+- **CoinGecko API** - Datos de respaldo y historial
+- **Gin Framework** - Framework web rápido
+- **GORM** - ORM para Go
+- **Bootstrap** - Framework CSS
+- **Chart.js** - Gráficos interactivos
+
+---
+
+**⚠️ Disclaimer**: Esta aplicación es solo para fines informativos. Las fluctuaciones de precios de criptomonedas son altamente volátiles. No constituye asesoramiento financiero. 
