@@ -1,6 +1,6 @@
 module btc-alerta-de-precio
 
-go 1.20
+go 1.24
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
