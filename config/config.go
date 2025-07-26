@@ -30,9 +30,14 @@ type Config struct {
 	FromEmail    string
 
 	// Notificaciones
-	EnableDesktopNotifications bool
-	EnableEmailNotifications   bool
-	EnableWebPushNotifications bool
+	EnableDesktopNotifications  bool
+	EnableEmailNotifications    bool
+	EnableWebPushNotifications  bool
+	EnableTelegramNotifications bool
+
+	// Telegram Bot
+	TelegramBotToken string
+	TelegramChatID   string
 
 	// Web Push (para notificaciones de Chrome)
 	VAPIDPublicKey  string
@@ -62,9 +67,14 @@ func Load() (*Config, error) {
 		FromEmail:    getEnv("FROM_EMAIL", ""),
 
 		// Notification settings
-		EnableDesktopNotifications: getEnvBool("ENABLE_DESKTOP_NOTIFICATIONS", true),
-		EnableEmailNotifications:   getEnvBool("ENABLE_EMAIL_NOTIFICATIONS", true),
-		EnableWebPushNotifications: getEnvBool("ENABLE_WEB_PUSH_NOTIFICATIONS", true),
+		EnableDesktopNotifications:  getEnvBool("ENABLE_DESKTOP_NOTIFICATIONS", true),
+		EnableEmailNotifications:    getEnvBool("ENABLE_EMAIL_NOTIFICATIONS", true),
+		EnableWebPushNotifications:  getEnvBool("ENABLE_WEB_PUSH_NOTIFICATIONS", true),
+		EnableTelegramNotifications: getEnvBool("ENABLE_TELEGRAM_NOTIFICATIONS", false),
+
+		// Telegram Bot configuration
+		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
+		TelegramChatID:   getEnv("TELEGRAM_CHAT_ID", ""),
 
 		// Web Push (VAPID keys)
 		VAPIDPublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),

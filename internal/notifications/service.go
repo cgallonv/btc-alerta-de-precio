@@ -1,11 +1,15 @@
 package notifications
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os/exec"
 	"runtime"
+	"time"
 
 	"btc-alerta-de-precio/config"
 	"btc-alerta-de-precio/internal/storage"
@@ -46,6 +50,14 @@ func (s *Service) SendAlert(data *NotificationData) error {
 		if err := s.sendDesktopNotification(data); err != nil {
 			log.Printf("Error enviando notificación de escritorio: %v", err)
 			errors = append(errors, fmt.Errorf("desktop: %w", err))
+		}
+	}
+
+	// Enviar notificación de Telegram
+	if s.config.EnableTelegramNotifications {
+		if err := s.sendTelegramNotification(data); err != nil {
+			log.Printf("Error enviando notificación de Telegram: %v", err)
+			errors = append(errors, fmt.Errorf("telegram: %w", err))
 		}
 	}
 
@@ -168,6 +180,8 @@ func (s *Service) sendWindowsNotification(title, message string) error {
 
 // Método para testing
 func (s *Service) TestNotifications() error {
+	log.Println("🧪 Probando todas las notificaciones...")
+
 	testData := &NotificationData{
 		Title:   "🧪 Test de Notificación",
 		Message: "Esta es una notificación de prueba del sistema de alertas de Bitcoin.",
@@ -180,8 +194,48 @@ func (s *Service) TestNotifications() error {
 		},
 	}
 
-	log.Println("Enviando notificación de prueba...")
-	return s.SendAlert(testData)
+	var errors []error
+
+	// Test Email
+	if s.config.EnableEmailNotifications {
+		log.Println("📧 Probando notificación por email...")
+		if err := s.SendAlert(testData); err != nil {
+			log.Printf("❌ Error en email: %v", err)
+			errors = append(errors, fmt.Errorf("email: %w", err))
+		} else {
+			log.Println("✅ Email enviado correctamente")
+		}
+	}
+
+	// Test Desktop
+	if s.config.EnableDesktopNotifications {
+		log.Println("🖥️ Probando notificación de escritorio...")
+		if err := s.sendDesktopNotification(testData); err != nil {
+			log.Printf("❌ Error en desktop: %v", err)
+			errors = append(errors, fmt.Errorf("desktop: %w", err))
+		} else {
+			log.Println("✅ Notificación de escritorio enviada")
+		}
+	}
+
+	// Test Telegram
+	if s.config.EnableTelegramNotifications {
+		log.Println("📱 Probando notificación de Telegram...")
+		if err := s.TestTelegramNotification(); err != nil {
+			log.Printf("❌ Error en Telegram: %v", err)
+			errors = append(errors, fmt.Errorf("telegram: %w", err))
+		} else {
+			log.Println("✅ Telegram enviado correctamente")
+		}
+	}
+
+	if len(errors) > 0 {
+		log.Printf("⚠️ Se encontraron %d errores en las pruebas", len(errors))
+		return errors[0]
+	}
+
+	log.Println("🎉 ¡Todas las notificaciones funcionan correctamente!")
+	return nil
 }
 
 // Web Push Notifications (implementación básica)
@@ -197,4 +251,70 @@ func (s *Service) SendWebPushNotification(subscriptions []storage.WebPushSubscri
 	// Requiere VAPID keys y manejo de subscriptions de service workers
 
 	return nil
+}
+
+// Telegram Notifications
+func (s *Service) sendTelegramNotification(data *NotificationData) error {
+	if s.config.TelegramBotToken == "" || s.config.TelegramChatID == "" {
+		return fmt.Errorf("telegram bot token o chat ID no configurados")
+	}
+
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", s.config.TelegramBotToken)
+
+	// Crear mensaje con formato HTML
+	message := fmt.Sprintf(
+		"🚨 <b>BITCOIN ALERT</b> 🚨\n\n"+
+			"💰 <b>Precio:</b> $%.2f\n"+
+			"📊 <b>Condición:</b> %s\n"+
+			"⏰ <b>Hora:</b> %s\n\n"+
+			"🤖 <i>Enviado por BTC Price Alert</i>",
+		data.Price,
+		data.Alert.GetDescription(),
+		time.Now().Format("15:04:05 02/01/2006"),
+	)
+
+	payload := map[string]interface{}{
+		"chat_id":    s.config.TelegramChatID,
+		"text":       message,
+		"parse_mode": "HTML",
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshaling JSON: %w", err)
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("error enviando request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("telegram API error: status %d", resp.StatusCode)
+	}
+
+	log.Println("📱 Notificación de Telegram enviada exitosamente")
+	return nil
+}
+
+// Test de notificación de Telegram
+func (s *Service) TestTelegramNotification() error {
+	if s.config.TelegramBotToken == "" || s.config.TelegramChatID == "" {
+		return fmt.Errorf("telegram no configurado - revisa TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID en .env")
+	}
+
+	testData := &NotificationData{
+		Title:   "🧪 Test de Telegram - BTC Price Alert",
+		Message: "Esta es una prueba de notificación de Telegram",
+		Price:   50000.00,
+		Alert: &storage.Alert{
+			Type:        "above",
+			TargetPrice: 49000,
+			IsActive:    true,
+		},
+	}
+
+	log.Println("📱 Enviando notificación de prueba a Telegram...")
+	return s.sendTelegramNotification(testData)
 }
