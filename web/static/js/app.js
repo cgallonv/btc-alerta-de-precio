@@ -669,7 +669,7 @@ async function deleteAllAlerts() {
         return;
     }
     try {
-        const response = await apiCall('/alerts/delete-all', { method: 'DELETE' });
+        const response = await apiCall('/delete-all-alerts', { method: 'POST' });
         if (response.success) {
             showNotification('Todas las alertas han sido eliminadas', 'success');
             loadAlerts();
