@@ -10,7 +10,7 @@ self.addEventListener('install', event => {
             console.log('📦 Cache abierto');
             return cache.addAll([
                 '/',
-                '/static/css/style.css',
+                // '/static/css/style.css', // ← Eliminado porque no existe
                 '/static/js/app.js',
                 '/static/images/bitcoin-icon.png'
             ]);
