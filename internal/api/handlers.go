@@ -498,8 +498,8 @@ func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
 	})
 }
 
+// GET /api/config
 func (h *Handler) getConfig(c *gin.Context) {
-	// Use real configuration from backend instead of hardcoded value
 	checkInterval := h.configProvider.GetCheckInterval()
 	checkIntervalMs := int(checkInterval.Milliseconds())
 

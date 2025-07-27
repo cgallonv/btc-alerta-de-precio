@@ -32,11 +32,10 @@ function initializeApp() {
 // Cargar configuración desde el backend
 async function loadConfig() {
     try {
-        const response = await fetch('/api/config');
-        const data = await response.json();
+        const response = await apiCall('/config');
         
-        if (data.success && data.data.check_interval_ms) {
-            updateInterval = data.data.check_interval_ms;
+        if (response.data.check_interval_ms) {
+            updateInterval = response.data.check_interval_ms;
             console.log(`🔧 Intervalo de actualización configurado: ${updateInterval}ms`);
         }
         
