@@ -1,12 +1,13 @@
 package adapters
 
 import (
-	"btc-alerta-de-precio/internal/bitcoin"
-	apperrors "btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/storage"
 	"errors"
 	"testing"
 	"time"
+
+	"btc-alerta-de-precio/internal/bitcoin"
+	apperrors "btc-alerta-de-precio/internal/errors"
+	"btc-alerta-de-precio/internal/storage"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,144 +17,177 @@ func TestAlertEvaluatorImpl_ShouldTrigger(t *testing.T) {
 	evaluator := NewAlertEvaluator()
 
 	tests := []struct {
-		name          string
-		alert         *storage.Alert
-		currentPrice  float64
-		previousPrice float64
-		expected      bool
+		name      string
+		alert     *storage.Alert
+		priceData *bitcoin.PriceData
+		expected  bool
 	}{
 		{
 			name: "inactive alert should not trigger",
 			alert: &storage.Alert{
-				Type:        "above",
-				TargetPrice: 50000,
-				IsActive:    false,
+				Type:     "above",
+				IsActive: false,
 			},
-			currentPrice:  55000,
-			previousPrice: 45000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 2.5,
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 		{
 			name: "already triggered alert should not trigger again",
 			alert: &storage.Alert{
 				Type:          "above",
-				TargetPrice:   50000,
 				IsActive:      true,
-				LastTriggered: &time.Time{}, // Non-nil means already triggered
+				LastTriggered: &[]time.Time{time.Now()}[0],
 			},
-			currentPrice:  55000,
-			previousPrice: 45000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              60000,
+				PriceChangePercent: 5.0,
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 		{
 			name: "above alert should trigger when price exceeds target",
 			alert: &storage.Alert{
 				Type:        "above",
-				TargetPrice: 50000,
+				TargetPrice: 45000,
 				IsActive:    true,
 			},
-			currentPrice:  55000,
-			previousPrice: 45000,
-			expected:      true,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 2.5,
+				Source:             "Binance",
+			},
+			expected: true,
 		},
 		{
 			name: "above alert should not trigger when price below target",
 			alert: &storage.Alert{
 				Type:        "above",
-				TargetPrice: 50000,
+				TargetPrice: 55000,
 				IsActive:    true,
 			},
-			currentPrice:  45000,
-			previousPrice: 40000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 2.5,
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 		{
-			name: "below alert should trigger when price falls below target",
+			name: "below alert should trigger when price below target",
 			alert: &storage.Alert{
 				Type:        "below",
-				TargetPrice: 50000,
+				TargetPrice: 55000,
 				IsActive:    true,
 			},
-			currentPrice:  45000,
-			previousPrice: 55000,
-			expected:      true,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: -1.5,
+				Source:             "Binance",
+			},
+			expected: true,
 		},
 		{
 			name: "below alert should not trigger when price above target",
 			alert: &storage.Alert{
 				Type:        "below",
-				TargetPrice: 50000,
+				TargetPrice: 45000,
 				IsActive:    true,
 			},
-			currentPrice:  55000,
-			previousPrice: 45000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 3.0,
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 		{
-			name: "change alert should trigger on positive percentage change",
+			name: "positive percentage alert should trigger on sufficient positive change (Binance)",
 			alert: &storage.Alert{
 				Type:       "change",
-				Percentage: 5.0, // 5% positive change threshold
+				Percentage: 3.0, // 3% positive change threshold
 				IsActive:   true,
 			},
-			currentPrice:  52500, // 5% increase from 50000
-			previousPrice: 50000,
-			expected:      true,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 4.0, // 4% positive change from Binance API
+				Source:             "Binance",
+			},
+			expected: true,
 		},
 		{
-			name: "change alert should NOT trigger on negative percentage change when expecting positive",
+			name: "positive percentage alert should NOT trigger on negative change (Binance)",
 			alert: &storage.Alert{
 				Type:       "change",
-				Percentage: 5.0, // 5% positive change threshold
+				Percentage: 3.0, // 3% positive change threshold
 				IsActive:   true,
 			},
-			currentPrice:  47500, // 5% decrease from 50000 - should NOT trigger
-			previousPrice: 50000,
-			expected:      false,
-		},
-		{
-			name: "negative percentage alert should trigger on sufficient negative change",
-			alert: &storage.Alert{
-				Type:       "change",
-				Percentage: -5.0, // -5% negative change threshold
-				IsActive:   true,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: -5.0, // Negative change should NOT trigger positive alert
+				Source:             "Binance",
 			},
-			currentPrice:  47500, // 5% decrease from 50000
-			previousPrice: 50000,
-			expected:      true,
+			expected: false,
 		},
 		{
-			name: "negative percentage alert should NOT trigger on positive change",
-			alert: &storage.Alert{
-				Type:       "change",
-				Percentage: -5.0, // -5% negative change threshold
-				IsActive:   true,
-			},
-			currentPrice:  52500, // 5% increase from 50000 - should NOT trigger
-			previousPrice: 50000,
-			expected:      false,
-		},
-		{
-			name: "negative percentage alert should NOT trigger on insufficient negative change",
+			name: "negative percentage alert should trigger on sufficient negative change (Binance)",
 			alert: &storage.Alert{
 				Type:       "change",
 				Percentage: -5.0, // -5% negative change threshold
 				IsActive:   true,
 			},
-			currentPrice:  48000, // 4% decrease from 50000 - not enough
-			previousPrice: 50000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: -6.0, // -6% negative change from Binance API
+				Source:             "Binance",
+			},
+			expected: true,
 		},
 		{
-			name: "change alert should not trigger when change below positive threshold",
+			name: "negative percentage alert should NOT trigger on positive change (Binance)",
+			alert: &storage.Alert{
+				Type:       "change",
+				Percentage: -5.0, // -5% negative change threshold
+				IsActive:   true,
+			},
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 5.0, // Positive change should NOT trigger negative alert
+				Source:             "Binance",
+			},
+			expected: false,
+		},
+		{
+			name: "negative percentage alert should NOT trigger on insufficient negative change (Binance)",
+			alert: &storage.Alert{
+				Type:       "change",
+				Percentage: -5.0, // -5% negative change threshold
+				IsActive:   true,
+			},
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: -3.0, // -3% is not enough for -5% threshold
+				Source:             "Binance",
+			},
+			expected: false,
+		},
+		{
+			name: "positive percentage alert should NOT trigger on insufficient positive change (Binance)",
 			alert: &storage.Alert{
 				Type:       "change",
 				Percentage: 5.0, // 5% positive change threshold
 				IsActive:   true,
 			},
-			currentPrice:  51000, // 2% increase from 50000 - not enough
-			previousPrice: 50000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 3.0, // 3% is not enough for 5% threshold
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 		{
 			name: "zero percentage alert should never trigger",
@@ -162,20 +196,26 @@ func TestAlertEvaluatorImpl_ShouldTrigger(t *testing.T) {
 				Percentage: 0.0, // Invalid zero percentage
 				IsActive:   true,
 			},
-			currentPrice:  55000,
-			previousPrice: 50000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 10.0,
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 		{
-			name: "change alert should not trigger when previous price is zero",
+			name: "change alert should not trigger for non-Binance sources",
 			alert: &storage.Alert{
 				Type:       "change",
 				Percentage: 5.0,
 				IsActive:   true,
 			},
-			currentPrice:  50000,
-			previousPrice: 0,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 0.0, // CoinDesk/CoinGecko don't provide percentage
+				Source:             "CoinDesk",
+			},
+			expected: false,
 		},
 		{
 			name: "unknown alert type should not trigger",
@@ -183,15 +223,18 @@ func TestAlertEvaluatorImpl_ShouldTrigger(t *testing.T) {
 				Type:     "unknown",
 				IsActive: true,
 			},
-			currentPrice:  50000,
-			previousPrice: 45000,
-			expected:      false,
+			priceData: &bitcoin.PriceData{
+				Price:              50000,
+				PriceChangePercent: 5.0,
+				Source:             "Binance",
+			},
+			expected: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := evaluator.ShouldTrigger(tt.alert, tt.currentPrice, tt.previousPrice)
+			result := evaluator.ShouldTrigger(tt.alert, tt.priceData)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -9,13 +9,11 @@ import (
 	"btc-alerta-de-precio/internal/bitcoin"
 	"btc-alerta-de-precio/internal/errors"
 	"btc-alerta-de-precio/internal/interfaces"
-	"btc-alerta-de-precio/internal/storage"
 )
 
-// PriceMonitor handles price monitoring and storage operations
+// PriceMonitor handles price monitoring and caching operations
 type PriceMonitor struct {
 	priceClient    interfaces.PriceClient
-	priceRepo      interfaces.PriceRepository
 	configProvider interfaces.ConfigProvider
 
 	// Monitoring state
@@ -23,7 +21,8 @@ type PriceMonitor struct {
 	stopChannel   chan struct{}
 	monitoringMux sync.RWMutex
 
-	// Price data cache
+	// Price data cache (replaces database storage)
+	priceCache   *PriceCache
 	lastPrice    *bitcoin.PriceData
 	lastPriceMux sync.RWMutex
 
@@ -39,19 +38,23 @@ type PriceMonitor struct {
 	callbackMux          sync.RWMutex
 }
 
-// PriceUpdateCallback is called when price is updated
-type PriceUpdateCallback func(current *bitcoin.PriceData, previous *bitcoin.PriceData)
+// PriceUpdateCallback is called when price is updated (simplified to only pass current price)
+type PriceUpdateCallback func(current *bitcoin.PriceData)
 
-// NewPriceMonitor creates a new price monitoring service
+// NewPriceMonitor creates a new price monitoring service with cache
 func NewPriceMonitor(
 	priceClient interfaces.PriceClient,
-	priceRepo interfaces.PriceRepository,
 	configProvider interfaces.ConfigProvider,
+	cacheSize int,
 ) *PriceMonitor {
+	if cacheSize <= 0 {
+		cacheSize = 20 // Default to 20 entries
+	}
+
 	return &PriceMonitor{
 		priceClient:           priceClient,
-		priceRepo:             priceRepo,
 		configProvider:        configProvider,
+		priceCache:            NewPriceCache(cacheSize),
 		stopChannel:           make(chan struct{}),
 		percentageStopChannel: make(chan struct{}),
 		priceUpdateCallbacks:  make([]PriceUpdateCallback, 0),
@@ -123,6 +126,11 @@ func (pm *PriceMonitor) GetCurrentPercentage() float64 {
 	return pm.currentPercentage
 }
 
+// GetPriceHistory returns cached price history
+func (pm *PriceMonitor) GetPriceHistory(limit int) []interfaces.PriceCacheEntry {
+	return pm.priceCache.GetHistory(limit)
+}
+
 // AddPriceUpdateCallback adds a callback for price updates
 func (pm *PriceMonitor) AddPriceUpdateCallback(callback PriceUpdateCallback) {
 	pm.callbackMux.Lock()
@@ -162,34 +170,20 @@ func (pm *PriceMonitor) checkAndUpdatePrice() {
 
 	log.Printf("Current Bitcoin price: %s", currentPrice.String())
 
-	// Save to price history
-	priceHistory := &storage.PriceHistory{
-		Price:     currentPrice.Price,
-		Currency:  currentPrice.Currency,
-		Source:    currentPrice.Source,
-		Timestamp: currentPrice.Timestamp,
-	}
-
-	if err := pm.priceRepo.SavePriceHistory(priceHistory); err != nil {
-		log.Printf("Error saving price history: %v", err)
-	}
-
-	// Get previous price for callbacks
-	pm.lastPriceMux.RLock()
-	previousPrice := pm.lastPrice
-	pm.lastPriceMux.RUnlock()
+	// Add to cache (replaces database storage)
+	pm.priceCache.Add(currentPrice)
 
 	// Update cached price
 	pm.lastPriceMux.Lock()
 	pm.lastPrice = currentPrice
 	pm.lastPriceMux.Unlock()
 
-	// Notify callbacks of price update
-	pm.notifyPriceUpdateCallbacks(currentPrice, previousPrice)
+	// Notify callbacks of price update (simplified - only current price)
+	pm.notifyPriceUpdateCallbacks(currentPrice)
 }
 
 // notifyPriceUpdateCallbacks notifies all registered callbacks
-func (pm *PriceMonitor) notifyPriceUpdateCallbacks(current, previous *bitcoin.PriceData) {
+func (pm *PriceMonitor) notifyPriceUpdateCallbacks(current *bitcoin.PriceData) {
 	pm.callbackMux.RLock()
 	callbacks := make([]PriceUpdateCallback, len(pm.priceUpdateCallbacks))
 	copy(callbacks, pm.priceUpdateCallbacks)
@@ -203,7 +197,7 @@ func (pm *PriceMonitor) notifyPriceUpdateCallbacks(current, previous *bitcoin.Pr
 					log.Printf("Price update callback panicked: %v", r)
 				}
 			}()
-			cb(current, previous)
+			cb(current)
 		}(callback)
 	}
 }

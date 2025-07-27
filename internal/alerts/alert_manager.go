@@ -41,7 +41,7 @@ func NewAlertManager(
 		configProvider:     configProvider,
 	}
 
-	// Register for price updates
+	// Register for price updates (simplified callback)
 	priceMonitor.AddPriceUpdateCallback(am.onPriceUpdate)
 
 	return am
@@ -75,22 +75,17 @@ func (am *AlertManager) IsMonitoring() bool {
 	return am.priceMonitor.IsMonitoring()
 }
 
-// onPriceUpdate is called when price is updated by the price monitor
-func (am *AlertManager) onPriceUpdate(current, previous *bitcoin.PriceData) {
+// onPriceUpdate is called when price is updated by the price monitor (simplified)
+func (am *AlertManager) onPriceUpdate(current *bitcoin.PriceData) {
 	if current == nil {
 		return
 	}
 
-	var previousPrice float64
-	if previous != nil {
-		previousPrice = previous.Price
-	}
-
-	am.checkAlerts(current.Price, previousPrice)
+	am.checkAlerts(current)
 }
 
-// checkAlerts evaluates all active alerts against current price
-func (am *AlertManager) checkAlerts(currentPrice, previousPrice float64) {
+// checkAlerts evaluates all active alerts against current price data
+func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
 	alerts, err := am.alertRepo.GetActiveAlerts()
 	if err != nil {
 		log.Printf("Error fetching active alerts: %v", err)
@@ -98,8 +93,8 @@ func (am *AlertManager) checkAlerts(currentPrice, previousPrice float64) {
 	}
 
 	for _, alert := range alerts {
-		if am.alertEvaluator.ShouldTrigger(&alert, currentPrice, previousPrice) {
-			if err := am.triggerAlert(&alert, currentPrice); err != nil {
+		if am.alertEvaluator.ShouldTrigger(&alert, priceData) {
+			if err := am.triggerAlert(&alert, priceData.Price); err != nil {
 				log.Printf("Error triggering alert %d: %v", alert.ID, err)
 			}
 		}
@@ -150,16 +145,16 @@ func (am *AlertManager) generateAlertMessage(alert *storage.Alert, currentPrice 
 	case "below":
 		return fmt.Sprintf("Bitcoin price has fallen below $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
 	case "change":
-		// Calculate percentage change (requires previous price)
+		// Use the 24h percentage change from Binance for the message
 		lastPrice := am.priceMonitor.GetLastPrice()
-		if lastPrice != nil && lastPrice.Price > 0 {
-			changePercent := ((currentPrice - lastPrice.Price) / lastPrice.Price) * 100
+		if lastPrice != nil && lastPrice.Source == "Binance" {
+			changePercent := lastPrice.PriceChangePercent
 			direction := "increased"
 			if changePercent < 0 {
 				direction = "decreased"
 				changePercent = -changePercent
 			}
-			return fmt.Sprintf("Bitcoin price has %s %.2f%%. Current price: $%.2f", direction, changePercent, currentPrice)
+			return fmt.Sprintf("Bitcoin price has %s %.2f%% (24h). Current price: $%.2f", direction, changePercent, currentPrice)
 		}
 		return fmt.Sprintf("Significant Bitcoin price change detected. Current price: $%.2f", currentPrice)
 	default:
@@ -284,4 +279,9 @@ func (am *AlertManager) GetCurrentPrice() (*bitcoin.PriceData, error) {
 // GetCurrentPercentage returns current percentage change
 func (am *AlertManager) GetCurrentPercentage() float64 {
 	return am.priceMonitor.GetCurrentPercentage()
+}
+
+// GetPriceHistory returns cached price history
+func (am *AlertManager) GetPriceHistory(limit int) []interfaces.PriceCacheEntry {
+	return am.priceMonitor.GetPriceHistory(limit)
 }

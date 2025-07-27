@@ -1,9 +1,20 @@
 package interfaces
 
 import (
+	"time"
+
 	"btc-alerta-de-precio/internal/bitcoin"
 	"btc-alerta-de-precio/internal/storage"
 )
+
+// PriceCacheEntry represents a cached price entry for API responses
+type PriceCacheEntry struct {
+	Price              float64   `json:"price"`
+	PriceChangePercent float64   `json:"price_change_percent"`
+	Currency           string    `json:"currency"`
+	Source             string    `json:"source"`
+	Timestamp          time.Time `json:"timestamp"`
+}
 
 // AlertService defines the interface for alert service operations
 // This is used by the API layer to interact with alert functionality
@@ -22,7 +33,7 @@ type AlertService interface {
 
 	// Price operations
 	GetCurrentPrice() (*bitcoin.PriceData, error)
-	GetPriceHistory(limit int) ([]storage.PriceHistory, error)
+	GetPriceHistory(limit int) ([]PriceCacheEntry, error)
 	GetCurrentPercentage() float64
 
 	// System operations

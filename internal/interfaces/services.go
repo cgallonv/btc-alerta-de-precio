@@ -22,7 +22,7 @@ type NotificationSender interface {
 
 // AlertEvaluator defines the interface for alert condition evaluation
 type AlertEvaluator interface {
-	ShouldTrigger(alert *storage.Alert, currentPrice, previousPrice float64) bool
+	ShouldTrigger(alert *storage.Alert, priceData *bitcoin.PriceData) bool
 }
 
 // ConfigProvider defines the interface for configuration access
