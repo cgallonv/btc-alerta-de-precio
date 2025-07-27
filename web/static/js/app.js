@@ -898,3 +898,21 @@ function arrayBufferToBase64(buffer) {
     }
     return window.btoa(binary);
 } 
+
+async function preloadAlerts() {
+    try {
+        const response = await fetch('/api/v1/preload-alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        if (data.success) {
+            showNotification('Alertas precargadas correctamente', 'success');
+            loadAlerts();
+        } else {
+            showNotification('Error al precargar alertas: ' + (data.message || 'Error desconocido'), 'danger');
+        }
+    } catch (error) {
+        showNotification('Error al precargar alertas: ' + error.message, 'danger');
+    }
+} 

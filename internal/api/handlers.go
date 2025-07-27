@@ -70,6 +70,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		api.DELETE("/webpush/unsubscribe", h.unsubscribeWebPush)
 		api.GET("/webpush/vapid-public-key", h.getVAPIDPublicKey)
 		api.GET("/config", h.getConfig)
+		api.POST("/preload-alerts", h.preloadAlerts) // 🆕 Endpoint para precargar alertas
 
 		// System
 		api.GET("/health", h.healthCheck)
@@ -506,6 +507,104 @@ func (h *Handler) getConfig(c *gin.Context) {
 		Message: "Configuration retrieved successfully",
 		Data: gin.H{
 			"check_interval_ms": checkIntervalMs,
+		},
+	})
+}
+
+// POST /api/v1/preload-alerts
+func (h *Handler) preloadAlerts(c *gin.Context) {
+	alerts := []storage.Alert{
+		{
+			Name:        "Precio por debajo de 17000",
+			Type:        "below",
+			TargetPrice: 17000,
+			Percentage:  0,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "Precio por debajo de 16000",
+			Type:        "below",
+			TargetPrice: 16000,
+			Percentage:  0,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "Precio por debajo de 15000",
+			Type:        "below",
+			TargetPrice: 15000,
+			Percentage:  0,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "Bajó 3%",
+			Type:        "change",
+			TargetPrice: 0,
+			Percentage:  -3,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "Bajó 4%",
+			Type:        "change",
+			TargetPrice: 0,
+			Percentage:  -4,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "Bajó 5%",
+			Type:        "change",
+			TargetPrice: 0,
+			Percentage:  -5,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "PRECIO BAJÓ 6%!!!!!!",
+			Type:        "change",
+			TargetPrice: 0,
+			Percentage:  -6,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+		{
+			Name:        "PRECIO BAJÓ 7%!!!!!!",
+			Type:        "change",
+			TargetPrice: 0,
+			Percentage:  -7,
+			IsActive:    true,
+			Email:       "cgallonv@gmail.com",
+			EnableEmail: true,
+		},
+	}
+
+	success := 0
+	errors := 0
+	for _, alert := range alerts {
+		err := h.alertService.CreateAlert(&alert)
+		if err != nil {
+			errors++
+		} else {
+			success++
+		}
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: errors == 0,
+		Message: fmt.Sprintf("%d alertas precargadas, %d errores", success, errors),
+		Data: gin.H{
+			"success": success,
+			"errors":  errors,
 		},
 	})
 }
