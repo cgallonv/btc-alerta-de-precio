@@ -139,11 +139,12 @@ func (am *AlertManager) triggerAlert(alert *storage.Alert, currentPrice float64)
 
 // generateAlertMessage creates the notification message based on alert type
 func (am *AlertManager) generateAlertMessage(alert *storage.Alert, currentPrice float64) string {
+	var message string
 	switch alert.Type {
 	case "above":
-		return fmt.Sprintf("Bitcoin price has exceeded $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
+		message = fmt.Sprintf("Bitcoin price has exceeded $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
 	case "below":
-		return fmt.Sprintf("Bitcoin price has fallen below $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
+		message = fmt.Sprintf("Bitcoin price has fallen below $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
 	case "change":
 		// Use the 24h percentage change from Binance for the message
 		lastPrice := am.priceMonitor.GetLastPrice()
@@ -154,12 +155,16 @@ func (am *AlertManager) generateAlertMessage(alert *storage.Alert, currentPrice 
 				direction = "decreased"
 				changePercent = -changePercent
 			}
-			return fmt.Sprintf("Bitcoin price has %s %.2f%% (24h). Current price: $%.2f", direction, changePercent, currentPrice)
+			message = fmt.Sprintf("Bitcoin price has %s %.2f%% (24h). Current price: $%.2f", direction, changePercent, currentPrice)
+		} else {
+			message = fmt.Sprintf("Significant Bitcoin price change detected. Current price: $%.2f", currentPrice)
 		}
-		return fmt.Sprintf("Significant Bitcoin price change detected. Current price: $%.2f", currentPrice)
 	default:
-		return fmt.Sprintf("Bitcoin alert triggered. Current price: $%.2f", currentPrice)
+		message = fmt.Sprintf("Bitcoin alert triggered. Current price: $%.2f", currentPrice)
 	}
+
+	// Agregar el nombre de la alerta al principio del mensaje
+	return fmt.Sprintf("🔔 %s\n%s", alert.Name, message)
 }
 
 // logNotification logs notification attempts
