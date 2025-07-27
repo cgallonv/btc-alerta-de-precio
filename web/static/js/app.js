@@ -663,6 +663,24 @@ async function deleteAlert(alertId) {
     }
 }
 
+// Eliminar todas las alertas
+async function deleteAllAlerts() {
+    if (!confirm('¿Estás seguro de que deseas eliminar todas las alertas? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    try {
+        const response = await apiCall('/alerts/delete-all', { method: 'DELETE' });
+        if (response.success) {
+            showNotification('Todas las alertas han sido eliminadas', 'success');
+            loadAlerts();
+        } else {
+            showNotification('Error al eliminar alertas: ' + (response.error || 'Error desconocido'), 'danger');
+        }
+    } catch (error) {
+        showNotification('Error al eliminar alertas: ' + error.message, 'danger');
+    }
+}
+
 // Mostrar notificaciones
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');

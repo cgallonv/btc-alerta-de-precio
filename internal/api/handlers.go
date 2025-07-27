@@ -70,7 +70,8 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		api.DELETE("/webpush/unsubscribe", h.unsubscribeWebPush)
 		api.GET("/webpush/vapid-public-key", h.getVAPIDPublicKey)
 		api.GET("/config", h.getConfig)
-		api.POST("/preload-alerts", h.preloadAlerts) // 🆕 Endpoint para precargar alertas
+		api.POST("/preload-alerts", h.preloadAlerts)      // 🆕 Endpoint para precargar alertas
+		api.POST("/delete-all-alerts", h.deleteAllAlerts) // 🆕 Endpoint para eliminar todas las alertas
 
 		// System
 		api.GET("/health", h.healthCheck)
@@ -612,6 +613,36 @@ func (h *Handler) preloadAlerts(c *gin.Context) {
 		Message: fmt.Sprintf("%d alertas precargadas, %d errores", success, errors),
 		Data: gin.H{
 			"success": success,
+			"errors":  errors,
+		},
+	})
+}
+
+// POST /api/v1/delete-all-alerts
+func (h *Handler) deleteAllAlerts(c *gin.Context) {
+	alerts, err := h.alertService.GetAlerts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   "Error obteniendo alertas: " + err.Error(),
+		})
+		return
+	}
+	count := 0
+	errors := 0
+	for _, alert := range alerts {
+		err := h.alertService.DeleteAlert(alert.ID)
+		if err != nil {
+			errors++
+		} else {
+			count++
+		}
+	}
+	c.JSON(http.StatusOK, Response{
+		Success: errors == 0,
+		Message: fmt.Sprintf("%d alertas eliminadas, %d errores", count, errors),
+		Data: gin.H{
+			"deleted": count,
 			"errors":  errors,
 		},
 	})
