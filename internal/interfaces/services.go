@@ -28,7 +28,6 @@ type AlertEvaluator interface {
 // ConfigProvider defines the interface for configuration access
 type ConfigProvider interface {
 	GetCheckInterval() time.Duration
-	GetPercentageUpdateInterval() time.Duration
 	IsEmailNotificationsEnabled() bool
 	IsWebPushNotificationsEnabled() bool
 	IsTelegramNotificationsEnabled() bool

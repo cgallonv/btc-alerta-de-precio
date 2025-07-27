@@ -67,6 +67,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		api.POST("/webpush/subscribe", h.subscribeWebPush)
 		api.DELETE("/webpush/unsubscribe", h.unsubscribeWebPush)
 		api.GET("/webpush/vapid-public-key", h.getVAPIDPublicKey)
+		api.GET("/config", h.getConfig)
 
 		// System
 		api.GET("/health", h.healthCheck)
@@ -489,6 +490,16 @@ func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
 		Success: true,
 		Data: gin.H{
 			"publicKey": "BI3enbbkk8hud4SXGXriy9wPEBovCg210LDckVrM5ldTzkbXCwEGZLGegjhwkTrOd9z152h4iLtTCrqOP_UzV-M",
+		},
+	})
+}
+
+func (h *Handler) getConfig(c *gin.Context) {
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Configuration retrieved successfully",
+		Data: gin.H{
+			"check_interval_ms": 30000, // 30 segundos en milisegundos para JavaScript
 		},
 	})
 }

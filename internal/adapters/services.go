@@ -128,10 +128,6 @@ func (a *ConfigAdapter) GetCheckInterval() time.Duration {
 	return a.config.CheckInterval
 }
 
-func (a *ConfigAdapter) GetPercentageUpdateInterval() time.Duration {
-	return a.config.PercentageUpdateInterval
-}
-
 func (a *ConfigAdapter) IsEmailNotificationsEnabled() bool {
 	return a.config.EnableEmailNotifications
 }

@@ -4,12 +4,13 @@ let currentPrice = 0;
 let webPushSupported = false;
 let webPushSubscription = null;
 let vapidPublicKey = null;
+let updateInterval = 30000; // Default 30 segundos, se actualiza desde el backend
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
-    startPriceUpdates();
+    loadConfig(); // Cargar configuración antes de iniciar updates
 });
 
 function initializeApp() {
@@ -26,6 +27,27 @@ function initializeApp() {
     loadCurrentPrice();
     loadAlerts();
     loadPriceHistory();
+}
+
+// Cargar configuración desde el backend
+async function loadConfig() {
+    try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        
+        if (data.success && data.data.check_interval_ms) {
+            updateInterval = data.data.check_interval_ms;
+            console.log(`🔧 Intervalo de actualización configurado: ${updateInterval}ms`);
+        }
+        
+        // Iniciar actualizaciones después de cargar la configuración
+        startPriceUpdates();
+    } catch (error) {
+        console.error('Error loading configuration:', error);
+        // Usar intervalo por defecto si falla
+        console.log(`⚠️ Usando intervalo por defecto: ${updateInterval}ms`);
+        startPriceUpdates();
+    }
 }
 
 function setupEventListeners() {
@@ -663,21 +685,24 @@ function showNotification(message, type = 'info') {
 
 // Actualizar precios periódicamente
 function startPriceUpdates() {
-    // Actualizar precio cada 15 segundos
+    // Usar intervalo unificado obtenido desde el backend
+    console.log(`🚀 Iniciando actualizaciones cada ${updateInterval}ms (${updateInterval/1000}s)`);
+    
+    // Actualizar precio y estadísticas
     setInterval(() => {
         loadCurrentPrice();
-        updateStats(); // También actualizar estadísticas
-    }, 15000); // 15 segundos
+        updateStats();
+    }, updateInterval);
     
-    // Actualizar historial cada 2 minutos
+    // Actualizar historial
     setInterval(() => {
         loadPriceHistory();
-    }, 120000); // 2 minutos
+    }, updateInterval);
     
-    // Actualizar alertas cada 30 segundos
+    // Actualizar alertas
     setInterval(() => {
         loadAlerts();
-    }, 30000); // 30 segundos
+    }, updateInterval);
 }
 
 // ===========================================

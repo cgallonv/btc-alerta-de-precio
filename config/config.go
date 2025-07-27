@@ -19,9 +19,8 @@ type Config struct {
 	// Bitcoin API
 	BitcoinAPIURL string
 
-	// Monitoreo
-	CheckInterval            time.Duration
-	PercentageUpdateInterval time.Duration
+	// Monitoreo - Intervalo único para todo (precio, porcentaje, backend y frontend)
+	CheckInterval time.Duration
 
 	// Email
 	SMTPHost     string
@@ -50,16 +49,14 @@ func Load() (*Config, error) {
 	godotenv.Load()
 
 	checkInterval, _ := time.ParseDuration(getEnv("CHECK_INTERVAL", "30s"))
-	percentageUpdateInterval, _ := time.ParseDuration(getEnv("PERCENTAGE_UPDATE_INTERVAL", "1m"))
 	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
 
 	return &Config{
-		Port:                     getEnv("PORT", "8080"),
-		Environment:              getEnv("ENVIRONMENT", "development"),
-		DatabasePath:             getEnv("DATABASE_PATH", "alerts.db"),
-		BitcoinAPIURL:            getEnv("BITCOIN_API_URL", "https://api.coindesk.com/v1/bpi/currentprice.json"),
-		CheckInterval:            checkInterval,
-		PercentageUpdateInterval: percentageUpdateInterval,
+		Port:          getEnv("PORT", "8080"),
+		Environment:   getEnv("ENVIRONMENT", "development"),
+		DatabasePath:  getEnv("DATABASE_PATH", "alerts.db"),
+		BitcoinAPIURL: getEnv("BITCOIN_API_URL", "https://api.coindesk.com/v1/bpi/currentprice.json"),
+		CheckInterval: checkInterval,
 
 		// Email configuration
 		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),

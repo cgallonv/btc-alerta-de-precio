@@ -67,11 +67,6 @@ func (m *MockConfigProvider) GetCheckInterval() time.Duration {
 	return args.Get(0).(time.Duration)
 }
 
-func (m *MockConfigProvider) GetPercentageUpdateInterval() time.Duration {
-	args := m.Called()
-	return args.Get(0).(time.Duration)
-}
-
 func (m *MockConfigProvider) IsEmailNotificationsEnabled() bool {
 	args := m.Called()
 	return args.Bool(0)

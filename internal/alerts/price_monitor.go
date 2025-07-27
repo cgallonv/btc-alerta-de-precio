@@ -26,12 +26,9 @@ type PriceMonitor struct {
 	lastPrice    *bitcoin.PriceData
 	lastPriceMux sync.RWMutex
 
-	// Percentage monitoring
-	isPercentageMonitoring  bool
-	percentageStopChannel   chan struct{}
-	percentageMonitoringMux sync.RWMutex
-	currentPercentage       float64
-	currentPercentageMux    sync.RWMutex
+	// Current percentage (updated with every price fetch)
+	currentPercentage    float64
+	currentPercentageMux sync.RWMutex
 
 	// Callbacks for price updates
 	priceUpdateCallbacks []PriceUpdateCallback
@@ -52,12 +49,11 @@ func NewPriceMonitor(
 	}
 
 	return &PriceMonitor{
-		priceClient:           priceClient,
-		configProvider:        configProvider,
-		priceCache:            NewPriceCache(cacheSize),
-		stopChannel:           make(chan struct{}),
-		percentageStopChannel: make(chan struct{}),
-		priceUpdateCallbacks:  make([]PriceUpdateCallback, 0),
+		priceClient:          priceClient,
+		configProvider:       configProvider,
+		priceCache:           NewPriceCache(cacheSize),
+		stopChannel:          make(chan struct{}),
+		priceUpdateCallbacks: make([]PriceUpdateCallback, 0),
 	}
 }
 
@@ -73,12 +69,9 @@ func (pm *PriceMonitor) Start(ctx context.Context) error {
 	pm.isMonitoring = true
 	interval := pm.configProvider.GetCheckInterval()
 
-	log.Printf("Starting Bitcoin price monitoring every %v", interval)
+	log.Printf("Starting unified Bitcoin price monitoring every %v", interval)
 
 	go pm.monitoringLoop(ctx, interval)
-
-	// Also start percentage monitoring if needed
-	go pm.startPercentageMonitoring(ctx)
 
 	return nil
 }
@@ -96,11 +89,9 @@ func (pm *PriceMonitor) Stop() error {
 	pm.isMonitoring = false
 
 	close(pm.stopChannel)
-	close(pm.percentageStopChannel)
 
-	// Recreate channels for potential restart
+	// Recreate channel for potential restart
 	pm.stopChannel = make(chan struct{})
-	pm.percentageStopChannel = make(chan struct{})
 
 	return nil
 }
@@ -138,7 +129,7 @@ func (pm *PriceMonitor) AddPriceUpdateCallback(callback PriceUpdateCallback) {
 	pm.priceUpdateCallbacks = append(pm.priceUpdateCallbacks, callback)
 }
 
-// monitoringLoop is the main monitoring loop
+// monitoringLoop is the unified monitoring loop for both price and percentage
 func (pm *PriceMonitor) monitoringLoop(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -160,7 +151,7 @@ func (pm *PriceMonitor) monitoringLoop(ctx context.Context, interval time.Durati
 	}
 }
 
-// checkAndUpdatePrice fetches current price and updates cache
+// checkAndUpdatePrice fetches current price and updates both price and percentage
 func (pm *PriceMonitor) checkAndUpdatePrice() {
 	currentPrice, err := pm.priceClient.GetCurrentPrice()
 	if err != nil {
@@ -178,7 +169,16 @@ func (pm *PriceMonitor) checkAndUpdatePrice() {
 	pm.lastPrice = currentPrice
 	pm.lastPriceMux.Unlock()
 
-	// Notify callbacks of price update (simplified - only current price)
+	// Update percentage if source is Binance (unified in single operation)
+	if currentPrice.Source == "Binance" {
+		pm.currentPercentageMux.Lock()
+		pm.currentPercentage = currentPrice.PriceChangePercent
+		pm.currentPercentageMux.Unlock()
+
+		log.Printf("📈 Price and percentage updated: %s", currentPrice.FormatPriceChange())
+	}
+
+	// Notify callbacks of price update
 	pm.notifyPriceUpdateCallbacks(currentPrice)
 }
 
@@ -199,62 +199,5 @@ func (pm *PriceMonitor) notifyPriceUpdateCallbacks(current *bitcoin.PriceData) {
 			}()
 			cb(current)
 		}(callback)
-	}
-}
-
-// startPercentageMonitoring starts the percentage change monitoring
-func (pm *PriceMonitor) startPercentageMonitoring(ctx context.Context) {
-	pm.percentageMonitoringMux.Lock()
-	defer pm.percentageMonitoringMux.Unlock()
-
-	if pm.isPercentageMonitoring {
-		return
-	}
-
-	pm.isPercentageMonitoring = true
-	interval := pm.configProvider.GetPercentageUpdateInterval()
-
-	log.Printf("Starting percentage change monitoring every %v", interval)
-
-	go pm.percentageMonitoringLoop(ctx, interval)
-}
-
-// percentageMonitoringLoop monitors percentage changes from Binance
-func (pm *PriceMonitor) percentageMonitoringLoop(ctx context.Context, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	// First update immediately
-	pm.updatePercentageFromPrice()
-
-	for {
-		select {
-		case <-ticker.C:
-			pm.updatePercentageFromPrice()
-		case <-pm.percentageStopChannel:
-			log.Println("Percentage monitoring stopped")
-			return
-		case <-ctx.Done():
-			log.Println("Percentage monitoring cancelled via context")
-			return
-		}
-	}
-}
-
-// updatePercentageFromPrice updates percentage from current price data
-func (pm *PriceMonitor) updatePercentageFromPrice() {
-	currentPrice, err := pm.priceClient.GetCurrentPrice()
-	if err != nil {
-		log.Printf("Error fetching price for percentage update: %v", err)
-		return
-	}
-
-	// Only update if source is Binance (which has percentage data)
-	if currentPrice.Source == "Binance" {
-		pm.currentPercentageMux.Lock()
-		pm.currentPercentage = currentPrice.PriceChangePercent
-		pm.currentPercentageMux.Unlock()
-
-		log.Printf("📈 Percentage change updated: %s", currentPrice.FormatPriceChange())
 	}
 }
