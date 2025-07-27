@@ -12,7 +12,8 @@ import (
 )
 
 type Handler struct {
-	alertService interfaces.AlertService
+	alertService   interfaces.AlertService
+	configProvider interfaces.ConfigProvider
 }
 
 type Response struct {
@@ -28,9 +29,10 @@ type AlertUpdateRequest struct {
 	Percentage  *float64 `json:"percentage,omitempty"`
 }
 
-func NewHandler(alertService interfaces.AlertService) *Handler {
+func NewHandler(alertService interfaces.AlertService, configProvider interfaces.ConfigProvider) *Handler {
 	return &Handler{
-		alertService: alertService,
+		alertService:   alertService,
+		configProvider: configProvider,
 	}
 }
 
@@ -495,11 +497,15 @@ func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
 }
 
 func (h *Handler) getConfig(c *gin.Context) {
+	// Use real configuration from backend instead of hardcoded value
+	checkInterval := h.configProvider.GetCheckInterval()
+	checkIntervalMs := int(checkInterval.Milliseconds())
+
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Configuration retrieved successfully",
 		Data: gin.H{
-			"check_interval_ms": 30000, // 30 segundos en milisegundos para JavaScript
+			"check_interval_ms": checkIntervalMs,
 		},
 	})
 }

@@ -80,7 +80,7 @@ func main() {
 		statsRepo:    statsRepo.(*adapters.GormStatsRepository),
 	}
 
-	apiHandler := api.NewHandler(serviceAdapter)
+	apiHandler := api.NewHandler(serviceAdapter, configProvider)
 	apiHandler.SetupRoutes(router)
 
 	server := &http.Server{
