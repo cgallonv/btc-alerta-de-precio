@@ -871,24 +871,38 @@ async function unsubscribeFromWebPush() {
 
 // Actualizar interfaz de usuario para Web Push
 function updateWebPushUI() {
+    console.log('🔄 Actualizando UI de Web Push...');
     const webPushButton = document.getElementById('webPushToggle');
-    if (!webPushButton) return;
+    
+    if (!webPushButton) {
+        console.error('❌ No se encontró el botón webPushToggle');
+        return;
+    }
 
     if (!webPushSupported) {
+        console.log('❌ Web Push no soportado, ocultando botón');
         webPushButton.style.display = 'none';
         return;
     }
 
+    console.log('✅ Web Push soportado, mostrando botón');
     webPushButton.style.display = 'block';
     
     if (webPushSubscription) {
+        console.log('📱 Hay suscripción activa, mostrando botón de desactivar');
         webPushButton.textContent = '🔕 Desactivar Web Push';
         webPushButton.className = 'btn btn-warning btn-sm';
         webPushButton.onclick = unsubscribeFromWebPush;
     } else {
+        console.log('📱 No hay suscripción, mostrando botón de activar');
         webPushButton.textContent = '🔔 Activar Web Push';
         webPushButton.className = 'btn btn-success btn-sm';
-        webPushButton.onclick = subscribeToWebPush;
+        webPushButton.onclick = () => {
+            console.log('🔔 Click en botón Activar Web Push');
+            subscribeToWebPush().catch(error => {
+                console.error('❌ Error en subscribeToWebPush:', error);
+            });
+        };
     }
 }
 
