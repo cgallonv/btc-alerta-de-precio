@@ -236,15 +236,12 @@ func (s *Service) sendTelegramNotification(data *NotificationData) error {
 
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", s.config.TelegramBotToken)
 
-	// Crear mensaje con formato HTML
+	// Usar el mensaje ya generado por AlertManager
 	message := fmt.Sprintf(
-		"🚨 <b>BITCOIN ALERT</b> 🚨\n\n"+
-			"💰 <b>Precio:</b> $%.2f\n"+
-			"📊 <b>Condición:</b> %s\n"+
+		"%s\n\n"+
 			"⏰ <b>Hora:</b> %s\n\n"+
 			"🤖 <i>Enviado por BTC Price Alert</i>",
-		data.Price,
-		data.Alert.GetDescription(),
+		data.Message,
 		time.Now().Format("15:04:05 02/01/2006"),
 	)
 
