@@ -38,7 +38,16 @@ self.addEventListener('activate', event => {
 
 // Manejar notificaciones push
 self.addEventListener('push', event => {
-    console.log('📨 Push notification recibida:', event);
+    console.log('📨 Push notification recibida');
+
+    // Debug: Check if notifications are supported
+    if (!self.Notification) {
+        console.error('❌ Notifications not supported');
+        return;
+    }
+
+    // Debug: Check notification permission
+    console.log('🔐 Notification permission:', self.Notification.permission);
 
     if (!event.data) {
         console.log('❌ No hay datos en la notificación push');
@@ -47,7 +56,10 @@ self.addEventListener('push', event => {
 
     let notificationData;
     try {
-        notificationData = event.data.json();
+        const payload = event.data.text();
+        console.log('📦 Payload recibido:', payload);
+        notificationData = JSON.parse(payload);
+        console.log('📦 Datos parseados:', notificationData);
     } catch (e) {
         console.error('❌ Error parsing notification data:', e);
         return;
@@ -58,7 +70,7 @@ self.addEventListener('push', event => {
         body: notificationData.body || 'Nueva alerta de precio de Bitcoin',
         icon: notificationData.icon || '/static/images/bitcoin-icon.png',
         badge: notificationData.badge || '/static/images/bitcoin-badge.png',
-        tag: 'bitcoin-price-alert',
+        tag: `bitcoin-price-alert-${Date.now()}`, // Unique tag for each notification
         data: notificationData.data || {},
         actions: notificationData.actions || [
             {
@@ -71,11 +83,51 @@ self.addEventListener('push', event => {
             }
         ],
         requireInteraction: true,
-        vibrate: [100, 50, 100]
+        silent: false,
+        renotify: true,
+        vibrate: [200, 100, 200, 100, 200],
+        timestamp: Date.now(),
+        dir: 'auto',
+        persistent: true
     };
+
+    console.log('🔔 Mostrando notificación:', { title, options });
+
+    // Debug: List current notifications
+    self.registration.getNotifications().then(notifications => {
+        console.log('📋 Notificaciones actuales:', notifications.length);
+        notifications.forEach((notification, i) => {
+            console.log(`Notification ${i + 1}:`, {
+                title: notification.title,
+                body: notification.body,
+                tag: notification.tag
+            });
+        });
+    });
+
+    // Close any existing notifications first
+    self.registration.getNotifications().then(notifications => {
+        notifications.forEach(notification => notification.close());
+    });
 
     event.waitUntil(
         self.registration.showNotification(title, options)
+            .then(() => {
+                console.log('✅ Notificación mostrada correctamente');
+                // Debug: Verify notification was created
+                return self.registration.getNotifications();
+            })
+            .then(notifications => {
+                console.log('📋 Notificaciones después de crear:', notifications.length);
+            })
+            .catch(error => {
+                console.error('❌ Error mostrando notificación:', error);
+                // Try showing a simpler notification as fallback
+                return self.registration.showNotification('🚨 Bitcoin Alert', {
+                    body: 'Price alert triggered',
+                    requireInteraction: true
+                });
+            })
     );
 });
 

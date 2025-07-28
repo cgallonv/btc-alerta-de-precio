@@ -96,9 +96,20 @@ func (w *WebPushStrategy) sendWebPushToSubscription(subscription storage.WebPush
 		return fmt.Errorf("error sending web push: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == 410 {
+		// Subscription is expired/invalid - remove it
+		log.Printf("🗑️ Removing invalid subscription: %s", subscription.Endpoint)
+		if err := w.db.RemoveWebPushSubscription(subscription.Endpoint); err != nil {
+			log.Printf("Error removing invalid subscription: %v", err)
+		}
+		return fmt.Errorf("subscription expired (410)")
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("web push server returned status: %d", resp.StatusCode)
 	}
+
 	return nil
 }
 
