@@ -742,7 +742,7 @@ async function initializeWebPush() {
 
     try {
         // Registrar Service Worker
-        const registration = await navigator.serviceWorker.register('/static/sw.js');
+        const registration = await navigator.serviceWorker.register('/sw.js');
         console.log('✅ Service Worker registrado:', registration);
 
         // Obtener VAPID public key del servidor
