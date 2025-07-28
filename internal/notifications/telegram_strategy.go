@@ -34,11 +34,12 @@ func (t *TelegramStrategy) Send(data *NotificationData) error {
 
 	// Create message with HTML formatting
 	message := fmt.Sprintf(
-		"🚨 <b>BITCOIN ALERT</b> 🚨\n\n"+
+		"🚨 <b>BITCOIN ALERT - %s</b> 🚨\n\n"+
 			"💰 <b>Price:</b> $%.2f\n"+
 			"📊 <b>Condition:</b> %s\n"+
 			"⏰ <b>Time:</b> %s\n\n"+
 			"🤖 <i>Sent by BTC Price Alert</i>",
+		data.Alert.Name,
 		data.Price,
 		data.Alert.GetDescription(),
 		time.Now().Format("15:04:05 02/01/2006"),
