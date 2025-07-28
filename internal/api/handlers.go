@@ -491,11 +491,10 @@ func (h *Handler) unsubscribeWebPush(c *gin.Context) {
 }
 
 func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
-	// TODO: Obtener la clave desde la configuración
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Data: gin.H{
-			"publicKey": "BI3enbbkk8hud4SXGXriy9wPEBovCg210LDckVrM5ldTzkbXCwEGZLGegjhwkTrOd9z152h4iLtTCrqOP_UzV-M",
+			"publicKey": h.configProvider.GetVAPIDPublicKey(),
 		},
 	})
 }

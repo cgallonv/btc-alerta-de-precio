@@ -132,3 +132,7 @@ func (a *ConfigAdapter) IsWebPushNotificationsEnabled() bool {
 func (a *ConfigAdapter) IsTelegramNotificationsEnabled() bool {
 	return a.config.EnableTelegramNotifications
 }
+
+func (a *ConfigAdapter) GetVAPIDPublicKey() string {
+	return a.config.VAPIDPublicKey
+}
