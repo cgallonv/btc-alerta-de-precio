@@ -11,6 +11,12 @@ import (
 	"btc-alerta-de-precio/internal/interfaces"
 )
 
+var (
+	lastLogTime     time.Time
+	lastLoggedPrice float64
+	logMutex        sync.RWMutex
+)
+
 // PriceMonitor handles price monitoring and caching operations
 type PriceMonitor struct {
 	priceClient    interfaces.PriceClient
@@ -69,7 +75,7 @@ func (pm *PriceMonitor) Start(ctx context.Context) error {
 	pm.isMonitoring = true
 	interval := pm.configProvider.GetCheckInterval()
 
-	log.Printf("Starting unified Bitcoin price monitoring every %v", interval)
+	log.Printf("🔄 Starting Bitcoin price monitoring (interval: %v)", interval)
 
 	go pm.monitoringLoop(ctx, interval)
 
@@ -85,14 +91,9 @@ func (pm *PriceMonitor) Stop() error {
 		return nil
 	}
 
-	log.Println("Stopping price monitoring...")
 	pm.isMonitoring = false
-
 	close(pm.stopChannel)
-
-	// Recreate channel for potential restart
-	pm.stopChannel = make(chan struct{})
-
+	pm.stopChannel = make(chan struct{}) // Recreate channel for potential restart
 	return nil
 }
 
@@ -142,10 +143,8 @@ func (pm *PriceMonitor) monitoringLoop(ctx context.Context, interval time.Durati
 		case <-ticker.C:
 			pm.checkAndUpdatePrice()
 		case <-pm.stopChannel:
-			log.Println("Price monitoring stopped")
 			return
 		case <-ctx.Done():
-			log.Println("Price monitoring cancelled via context")
 			return
 		}
 	}
@@ -155,11 +154,9 @@ func (pm *PriceMonitor) monitoringLoop(ctx context.Context, interval time.Durati
 func (pm *PriceMonitor) checkAndUpdatePrice() {
 	currentPrice, err := pm.priceClient.GetCurrentPrice()
 	if err != nil {
-		log.Printf("Error fetching Bitcoin price: %v", err)
+		log.Printf("❌ Error fetching Bitcoin price: %v", err)
 		return
 	}
-
-	log.Printf("Current Bitcoin price: %s", currentPrice.String())
 
 	// Add to cache (replaces database storage)
 	pm.priceCache.Add(currentPrice)
@@ -175,11 +172,50 @@ func (pm *PriceMonitor) checkAndUpdatePrice() {
 		pm.currentPercentage = currentPrice.PriceChangePercent
 		pm.currentPercentageMux.Unlock()
 
-		log.Printf("📈 Price and percentage updated: %s", currentPrice.FormatPriceChange())
+		// Log price update only when there's a significant change (>0.1%) or every 5 minutes
+		if shouldLogPrice(currentPrice) {
+			log.Printf("💰 BTC: $%.2f (%+.2f%%) [%s]",
+				currentPrice.Price,
+				currentPrice.PriceChangePercent,
+				currentPrice.Source)
+		}
 	}
 
 	// Notify callbacks of price update
 	pm.notifyPriceUpdateCallbacks(currentPrice)
+}
+
+// shouldLogPrice determines if we should log the current price update
+func shouldLogPrice(price *bitcoin.PriceData) bool {
+	logMutex.Lock()
+	defer logMutex.Unlock()
+
+	now := time.Now()
+
+	// Log if:
+	// 1. First price update (lastLoggedPrice is 0)
+	// 2. Price changed by more than 0.1%
+	// 3. It's been more than 5 minutes since last log
+	significantChange := lastLoggedPrice != 0 &&
+		abs((price.Price-lastLoggedPrice)/lastLoggedPrice) > 0.001
+	timeToLog := now.Sub(lastLogTime) >= 5*time.Minute
+
+	shouldLog := lastLoggedPrice == 0 || significantChange || timeToLog
+
+	if shouldLog {
+		lastLogTime = now
+		lastLoggedPrice = price.Price
+	}
+
+	return shouldLog
+}
+
+// abs returns the absolute value of a float64
+func abs(x float64) float64 {
+	if x < 0 {
+		return -x
+	}
+	return x
 }
 
 // notifyPriceUpdateCallbacks notifies all registered callbacks
@@ -190,11 +226,10 @@ func (pm *PriceMonitor) notifyPriceUpdateCallbacks(current *bitcoin.PriceData) {
 	pm.callbackMux.RUnlock()
 
 	for _, callback := range callbacks {
-		// Execute callbacks in goroutines to avoid blocking
 		go func(cb PriceUpdateCallback) {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("Price update callback panicked: %v", r)
+					log.Printf("❌ Callback panic: %v", r)
 				}
 			}()
 			cb(current)
