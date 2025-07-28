@@ -103,6 +103,10 @@ func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
 
 // triggerAlert processes an alert trigger
 func (am *AlertManager) triggerAlert(alert *storage.Alert, currentPrice float64) error {
+	if alert == nil {
+		return fmt.Errorf("alert is nil")
+	}
+
 	log.Printf("🚨 Triggering alert: %s (Price: $%.2f)", alert.Name, currentPrice)
 
 	// Mark alert as triggered

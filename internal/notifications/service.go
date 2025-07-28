@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -84,7 +83,6 @@ func (s *Service) sendTelegramNotification(data *NotificationData) error {
 		return fmt.Errorf("telegram API error: status %d", resp.StatusCode)
 	}
 
-	log.Println("📱 Notificación de Telegram enviada exitosamente")
 	return nil
 }
 
@@ -105,6 +103,5 @@ func (s *Service) TestTelegramNotification() error {
 		},
 	}
 
-	log.Println("📱 Enviando notificación de prueba a Telegram...")
 	return s.sendTelegramNotification(testData)
 }
