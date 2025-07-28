@@ -122,6 +122,14 @@ function Dev {
     Write-Info "Iniciando en modo desarrollo..."
     Setup
     Set-Location -Path "$PSScriptRoot/.."  # Ensure we are in the project root
+    Write-Host "########################################################"
+    Write-Host "Current Directory: $(Get-Location)"
+    Write-Host "########################################################"
+    if (Test-Path "./web/sw.js") {
+        Write-Host "sw.js FOUND"
+    } else {
+        Write-Host "sw.js NOT FOUND"
+    }
     go run main.go
 }
 
