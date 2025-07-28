@@ -39,6 +39,7 @@ func NewHandler(alertService interfaces.AlertService, configProvider interfaces.
 func (h *Handler) SetupRoutes(router *gin.Engine) {
 	// Servir archivos estáticos
 	router.Static("/static", "./web/static")
+	router.StaticFile("/sw.js", "./web/sw.js") // Serve service worker at root
 	router.LoadHTMLGlob("web/templates/*")
 
 	// Página principal
