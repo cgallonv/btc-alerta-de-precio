@@ -516,9 +516,9 @@ func (h *Handler) getConfig(c *gin.Context) {
 func (h *Handler) preloadAlerts(c *gin.Context) {
 	alerts := []storage.Alert{
 		{
-			Name:           "Precio por debajo de 17000",
+			Name:           "Precio por debajo de 117000",
 			Type:           "below",
-			TargetPrice:    17000,
+			TargetPrice:    117000,
 			Percentage:     0,
 			IsActive:       true,
 			Email:          "cgallonv@gmail.com",
@@ -526,9 +526,9 @@ func (h *Handler) preloadAlerts(c *gin.Context) {
 			EnableTelegram: true,
 		},
 		{
-			Name:           "Precio por debajo de 16000",
+			Name:           "Precio por debajo de 116000",
 			Type:           "below",
-			TargetPrice:    16000,
+			TargetPrice:    116000,
 			Percentage:     0,
 			IsActive:       true,
 			Email:          "cgallonv@gmail.com",
@@ -536,9 +536,9 @@ func (h *Handler) preloadAlerts(c *gin.Context) {
 			EnableTelegram: true,
 		},
 		{
-			Name:           "Precio por debajo de 15000",
+			Name:           "Precio por debajo de 115000",
 			Type:           "below",
-			TargetPrice:    15000,
+			TargetPrice:    115000,
 			Percentage:     0,
 			IsActive:       true,
 			Email:          "cgallonv@gmail.com",
