@@ -60,6 +60,7 @@ func (w *WebPushStrategy) Send(data *NotificationData) error {
 	if err != nil {
 		return fmt.Errorf("error marshaling payload: %w", err)
 	}
+	log.Printf("WebPush payload: %s", string(payloadBytes))
 
 	var errors []error
 	for _, subscription := range subscriptions {
