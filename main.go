@@ -82,6 +82,9 @@ func main() {
 
 	apiHandler := api.NewHandler(serviceAdapter, configProvider)
 	apiHandler.SetupRoutes(router)
+	router.GET("/test-route", func(c *gin.Context) {
+		c.String(200, "Test route works!")
+	})
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
