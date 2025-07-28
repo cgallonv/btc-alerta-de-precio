@@ -121,6 +121,7 @@ function PreCommitCheck {
 function Dev {
     Write-Info "Iniciando en modo desarrollo..."
     Setup
+    Set-Location -Path "$PSScriptRoot/.."  # Ensure we are in the project root
     go run main.go
 }
 
