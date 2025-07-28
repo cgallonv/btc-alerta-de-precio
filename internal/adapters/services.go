@@ -52,13 +52,6 @@ func (a *NotificationServiceAdapter) SendAlert(data *notifications.NotificationD
 	return nil
 }
 
-func (a *NotificationServiceAdapter) SendWebPushNotification(subscriptions []storage.WebPushSubscription, data *notifications.NotificationData) error {
-	if err := a.service.SendWebPushNotification(subscriptions, data); err != nil {
-		return errors.WrapError(err, "WEBPUSH_SEND_ERROR", "Failed to send web push notification")
-	}
-	return nil
-}
-
 func (a *NotificationServiceAdapter) TestTelegramNotification() error {
 	if err := a.service.TestTelegramNotification(); err != nil {
 		return errors.WrapError(err, "TELEGRAM_TEST_ERROR", "Failed to test Telegram notification")

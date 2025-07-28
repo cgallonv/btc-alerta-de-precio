@@ -16,7 +16,6 @@ type PriceClient interface {
 // NotificationSender defines the interface for sending notifications
 type NotificationSender interface {
 	SendAlert(data *notifications.NotificationData) error
-	SendWebPushNotification(subscriptions []storage.WebPushSubscription, data *notifications.NotificationData) error
 	TestTelegramNotification() error
 }
 

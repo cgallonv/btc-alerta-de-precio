@@ -37,11 +37,6 @@ func (m *MockNotificationSender) SendAlert(data *notifications.NotificationData)
 	return args.Error(0)
 }
 
-func (m *MockNotificationSender) SendWebPushNotification(subscriptions []storage.WebPushSubscription, data *notifications.NotificationData) error {
-	args := m.Called(subscriptions, data)
-	return args.Error(0)
-}
-
 func (m *MockNotificationSender) TestTelegramNotification() error {
 	args := m.Called()
 	return args.Error(0)

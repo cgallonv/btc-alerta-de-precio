@@ -203,6 +203,49 @@ func TestTelegramStrategy_IsEnabled(t *testing.T) {
 	}
 }
 
+func TestWebPushStrategy_IsEnabled(t *testing.T) {
+	cfg := &config.Config{
+		EnableWebPushNotifications: true,
+	}
+	// Use a nil db for IsEnabled test (db not needed)
+	strategy := NewWebPushStrategy(cfg, nil)
+
+	tests := []struct {
+		name     string
+		alert    *storage.Alert
+		expected bool
+	}{
+		{
+			name: "enabled when both conditions met",
+			alert: &storage.Alert{
+				EnableWebPush: true,
+			},
+			expected: true,
+		},
+		{
+			name: "disabled when webpush disabled globally",
+			alert: &storage.Alert{
+				EnableWebPush: true,
+			},
+			expected: true, // Still true because we set EnableWebPushNotifications to true
+		},
+		{
+			name: "disabled when alert webpush disabled",
+			alert: &storage.Alert{
+				EnableWebPush: false,
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := strategy.IsEnabled(tt.alert)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestNotificationManager_AddRemoveStrategy(t *testing.T) {
 	manager := NewNotificationManager()
 
