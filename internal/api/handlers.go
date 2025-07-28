@@ -238,7 +238,8 @@ func (h *Handler) updateAlert(c *gin.Context) {
 	}
 
 	// Solo actualizar el campo correspondiente según el tipo de alerta
-	if alert.Type == "above" || alert.Type == "below" {
+	switch alert.Type {
+	case "above", "below":
 		if updateReq.TargetPrice != nil {
 			alert.TargetPrice = *updateReq.TargetPrice
 		} else {
@@ -248,7 +249,7 @@ func (h *Handler) updateAlert(c *gin.Context) {
 			})
 			return
 		}
-	} else if alert.Type == "change" {
+	case "change":
 		if updateReq.Percentage != nil {
 			alert.Percentage = *updateReq.Percentage
 		} else {
