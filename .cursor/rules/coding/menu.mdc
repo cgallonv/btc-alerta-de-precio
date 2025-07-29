@@ -1,58 +1,197 @@
-# Menu and Main Feature Creation Guidelines
+# Menu and Feature Creation Guidelines
 
-## 1. Component Structure
-- All new menus and main features must be implemented as partial templates in `web/templates/partials/`.
-- For a new main feature (e.g., alerts, notifications, user profile):
-  - Extract reusable UI parts (lists, forms, modals) into their own partials (e.g., `alerts_list.html`, `alerts_form.html`).
-  - The main page template (e.g., `alerts.html`) should include these partials and handle layout.
-- Use the `top_bar` partial for global navigation and the `hamburger_menu` partial for mobile/responsive navigation.
+## Overview
+This document outlines the standardized process for adding new menus and main features to the Bitcoin Price Alert application.
 
-## 2. Frontend Integration
-- Include partials in page templates using Go template syntax: `{{ template "partial_name" . }}`
-- Place the main feature partials in the appropriate location in the DOM for accessibility and layout.
-- Ensure all partials are registered in the backend template loader (see `handlers.go`).
-
-## 3. Styling and Responsiveness
-- Use existing CSS classes and variables for colors, spacing, and typography.
-- All features and menus must be fully responsive and accessible (keyboard navigation, ARIA labels).
-- Hamburger menu must always be present and functional on mobile.
-
-## 4. JavaScript Behavior
-- Feature-specific JS should only run on pages where the feature is present (check for relevant DOM elements before running logic).
-- Menu open/close logic must be handled in a dedicated JS function.
-- Avoid global variables; encapsulate feature logic.
-- If the feature interacts with backend data, use async API calls and handle loading/error states gracefully.
-
-## 5. Backend Handlers
-- For features that require dynamic data (e.g., alerts, notifications), create dedicated backend handlers in `internal/api/handlers.go`.
-- Use RESTful endpoints and return JSON for feature-related data.
-- Ensure all endpoints are secure and respect user authentication/authorization.
-
-## 6. Testing and Documentation
-- Add unit tests for backend handlers.
-- Add integration tests for feature rendering and behavior.
-- Document the feature’s structure, usage, and integration steps in the project’s documentation.
-
-## 7. Code Review Checklist
-- [ ] Feature is implemented as partial(s) and included in the main page template.
-- [ ] Feature is included in all relevant pages.
-- [ ] Feature is responsive and accessible.
-- [ ] JavaScript logic is encapsulated and only runs where needed.
-- [ ] Backend handlers are secure and tested.
-- [ ] Documentation is updated.
-
-## Example: Adding an Alerts Feature
-1. Create `alerts_list.html` and `alerts_form.html` in `web/templates/partials/`.
-2. In `alerts.html`, include the partials:
-   ```go
-   {{ template "alerts_form" . }}
-   {{ template "alerts_list" . }}
+## Template Structure
+1. **Base Layout (`layout.html`)**
+   ```html
+   {{ block "title" . }}Default Title{{ end }}
+   {{ block "content" . }}{{ end }}
+   {{ block "scripts" . }}{{ end }}
    ```
-3. Register the new partials in the template loader in `handlers.go`.
-4. Add backend handlers for alerts in `internal/api/handlers.go`.
-5. Add JS logic for alerts, but only run it if the relevant DOM elements exist.
-6. Add tests and update documentation.
-description:
-globs:
-alwaysApply: false
----
+
+2. **Page Template Structure**
+   ```html
+   {{ define "title" }}Feature Name - Bitcoin Price Alert{{ end }}
+   {{ define "content" }}
+     <!-- Feature content -->
+   {{ end }}
+   {{ define "scripts" }}
+     <!-- Feature-specific scripts -->
+   {{ end }}
+   ```
+
+## Component Organization
+1. **Partials Location**
+   - Place reusable components in `web/templates/partials/`
+   - Name format: `feature_component.html` (e.g., `account_summary.html`)
+
+2. **JavaScript Organization**
+   - Place feature-specific JS in `web/static/js/feature.js`
+   - Use IIFE pattern for scoped functionality
+   ```javascript
+   (function() {
+     // Feature-specific code
+   })();
+   ```
+
+## Adding a New Menu Item
+1. **Update Hamburger Menu**
+   ```html
+   <a href="/feature" class="side-menu-item">
+     <i class="fas fa-icon"></i> Feature Name
+   </a>
+   ```
+
+2. **Add Route Handler**
+   ```go
+   func (h *Handler) featurePage(c *gin.Context) {
+     c.HTML(http.StatusOK, "layout.html", gin.H{
+       "Version": time.Now().Unix(),
+       "CurrentPage": "feature",
+     })
+   }
+   ```
+
+3. **Register Templates**
+   ```go
+   router.LoadHTMLFiles(
+     // ... existing templates ...
+     "web/templates/feature.html",
+     "web/templates/partials/feature_component.html",
+   )
+   ```
+
+## Feature Implementation Checklist
+1. **Frontend Structure**
+   - [ ] Create main template extending base layout
+   - [ ] Break into logical partials if needed
+   - [ ] Add feature-specific styles to `styles.css`
+   - [ ] Create feature-specific JavaScript file
+
+2. **Backend Structure**
+   - [ ] Add route handler in `handlers.go`
+   - [ ] Define necessary API endpoints
+   - [ ] Create interfaces in `interfaces/`
+   - [ ] Implement services in `adapters/`
+
+3. **Data Flow**
+   - [ ] Define data models
+   - [ ] Implement repository layer if needed
+   - [ ] Add API endpoints for data operations
+   - [ ] Implement frontend data fetching
+
+4. **Testing**
+   - [ ] Add handler tests
+   - [ ] Add service/adapter tests
+   - [ ] Add frontend component tests
+   - [ ] Test responsive design
+
+## Example: Adding Account Overview Feature
+
+1. **File Structure**
+   ```
+   web/
+     templates/
+       account.html              # Main template
+       partials/
+         account_summary.html    # Balance component
+         account_assets.html     # Assets list component
+     static/
+       js/
+         account.js             # Account-specific logic
+   internal/
+     api/
+       handlers.go              # Account routes
+     interfaces/
+       account_service.go       # Account interfaces
+     adapters/
+       account_service.go       # Service implementation
+   ```
+
+2. **Handler Implementation**
+   ```go
+   func (h *Handler) accountPage(c *gin.Context) {
+     c.HTML(http.StatusOK, "layout.html", gin.H{
+       "Version": time.Now().Unix(),
+       "CurrentPage": "account",
+     })
+   }
+   ```
+
+3. **Template Example**
+   ```html
+   {{ define "title" }}Account - Bitcoin Price Alert{{ end }}
+   {{ define "content" }}
+     {{ template "partials/account_summary" . }}
+     {{ template "partials/account_assets" . }}
+   {{ end }}
+   ```
+
+4. **JavaScript Pattern**
+   ```javascript
+   // account.js
+   (function() {
+     const state = {
+       balances: null,
+       assets: null
+     };
+
+     async function initialize() {
+       await Promise.all([
+         loadBalances(),
+         loadAssets()
+       ]);
+     }
+
+     document.addEventListener('DOMContentLoaded', initialize);
+   })();
+   ```
+
+## Best Practices
+1. **Accessibility**
+   - Add ARIA labels to navigation items
+   - Ensure keyboard navigation works
+   - Maintain proper heading hierarchy
+
+2. **Performance**
+   - Lazy load feature-specific JS
+   - Use version query params for cache busting
+   - Implement loading states
+
+3. **Error Handling**
+   - Show user-friendly error messages
+   - Implement proper error boundaries
+   - Log errors appropriately
+
+4. **State Management**
+   - Use module pattern for feature-specific state
+   - Implement proper event handling
+   - Consider data refresh strategies
+
+## Review Criteria
+Before submitting a new menu/feature:
+1. **Code Quality**
+   - Follows template structure
+   - Implements proper error handling
+   - Has necessary tests
+   - Uses consistent naming conventions
+
+2. **User Experience**
+   - Responsive design works
+   - Loading states implemented
+   - Error states handled gracefully
+   - Consistent with app style
+
+3. **Performance**
+   - No unnecessary re-renders
+   - Proper resource loading
+   - Efficient API calls
+   - Caching strategy defined
+
+4. **Documentation**
+   - Updated API documentation
+   - Added usage examples
+   - Updated README if needed
+   - Added necessary comments
