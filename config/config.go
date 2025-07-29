@@ -58,7 +58,7 @@ type Config struct {
 }
 
 func Load() (*Config, error) {
-	// Cargar .env si existe
+	// Load .env file if it exists
 	err := godotenv.Load()
 	if err != nil {
 		log.Printf("Error loading .env file: %v", err)
@@ -69,11 +69,16 @@ func Load() (*Config, error) {
 	checkInterval, _ := time.ParseDuration(getEnv("CHECK_INTERVAL", "30s"))
 	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
 
-	// Add debug logging for Binance API credentials
+	// Load Binance API credentials
 	binanceKey := getEnv("BINANCE_API_KEY", "")
 	binanceSecret := getEnv("BINANCE_API_SECRET", "")
-	log.Printf("Binance API Key length: %d", len(binanceKey))
-	log.Printf("Binance API Secret length: %d", len(binanceSecret))
+
+	// Log Binance API configuration status
+	if binanceKey == "" || binanceSecret == "" {
+		log.Printf("⚠️ Binance API credentials not configured")
+	} else {
+		log.Printf("✅ Binance API credentials loaded (key length: %d, secret length: %d)", len(binanceKey), len(binanceSecret))
+	}
 
 	return &Config{
 		Port:          getEnv("PORT", "8080"),

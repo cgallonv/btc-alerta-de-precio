@@ -5,28 +5,108 @@
             const response = await apiCall('/account/balance');
             
             // Update total balance
-            const totalBalanceElement = document.querySelector('.balance-item h3');
+            const totalBalanceElement = document.querySelector('.balance-item h3.bitcoin-color');
             if (totalBalanceElement) {
-                totalBalanceElement.textContent = formatCurrency(response.data.total_balance);
+                totalBalanceElement.textContent = formatCurrency(response.data.TotalBalance);
             }
 
             // Update available balance
             const availableBalanceElement = document.querySelector('.balance-item h3.text-success');
             if (availableBalanceElement) {
-                availableBalanceElement.textContent = formatCurrency(response.data.available_balance);
+                availableBalanceElement.textContent = formatCurrency(response.data.AvailableBalance);
             }
 
             // Update last updated timestamp
             const lastUpdatedElement = document.querySelector('.balance-summary .text-muted + span');
             if (lastUpdatedElement) {
-                lastUpdatedElement.textContent = new Date(response.data.last_updated).toLocaleString();
+                lastUpdatedElement.textContent = new Date(response.data.LastUpdated).toLocaleString();
             }
 
+            // Update account status
+            updateAccountStatus(response.data);
+
+            // Update commission rates
+            updateCommissionRates(response.data);
+
             // Update assets table
-            updateAssetsTable(response.data.assets);
+            updateAssetsTable(response.data.Assets);
         } catch (error) {
             console.error('Error updating balance:', error);
             showNotification('Error updating balance information', 'danger');
+        }
+    }
+
+    function updateAccountStatus(data) {
+        // Update account type
+        const accountTypeElement = document.querySelector('[data-field="account-type"]');
+        if (accountTypeElement) {
+            accountTypeElement.textContent = data.accountType;
+        }
+
+        // Update trading status
+        const tradingStatusElement = document.querySelector('[data-field="trading-status"]');
+        if (tradingStatusElement) {
+            tradingStatusElement.innerHTML = data.canTrade ? 
+                '<span class="badge bg-success">Enabled</span>' : 
+                '<span class="badge bg-danger">Disabled</span>';
+        }
+
+        // Update withdrawal status
+        const withdrawalStatusElement = document.querySelector('[data-field="withdrawal-status"]');
+        if (withdrawalStatusElement) {
+            withdrawalStatusElement.innerHTML = data.canWithdraw ? 
+                '<span class="badge bg-success">Enabled</span>' : 
+                '<span class="badge bg-danger">Disabled</span>';
+        }
+
+        // Update deposit status
+        const depositStatusElement = document.querySelector('[data-field="deposit-status"]');
+        if (depositStatusElement) {
+            depositStatusElement.innerHTML = data.canDeposit ? 
+                '<span class="badge bg-success">Enabled</span>' : 
+                '<span class="badge bg-danger">Disabled</span>';
+        }
+
+        // Update self-trade prevention
+        const selfTradeElement = document.querySelector('[data-field="self-trade"]');
+        if (selfTradeElement) {
+            selfTradeElement.innerHTML = data.requireSelfTradePrevention ? 
+                '<span class="badge bg-warning">Required</span>' : 
+                '<span class="badge bg-secondary">Optional</span>';
+        }
+
+        // Update permissions
+        const permissionsElement = document.querySelector('[data-field="permissions"]');
+        if (permissionsElement) {
+            permissionsElement.innerHTML = data.permissions.map(perm => 
+                `<span class="badge bg-info me-1">${perm}</span>`
+            ).join('');
+        }
+    }
+
+    function updateCommissionRates(data) {
+        // Update maker fee
+        const makerFeeElement = document.querySelector('[data-field="maker-fee"]');
+        if (makerFeeElement) {
+            makerFeeElement.textContent = data.commissionRates.maker + '%';
+        }
+
+        // Update taker fee
+        const takerFeeElement = document.querySelector('[data-field="taker-fee"]');
+        if (takerFeeElement) {
+            makerFeeElement.textContent = data.commissionRates.taker + '%';
+        }
+
+        // Update buyer fee
+        const buyerFeeElement = document.querySelector('[data-field="buyer-fee"]');
+        if (buyerFeeElement) {
+            buyerFeeElement.textContent = data.commissionRates.buyer + '%';
+        }
+
+        // Update seller fee
+        const sellerFeeElement = document.querySelector('[data-field="seller-fee"]');
+        if (sellerFeeElement) {
+            sellerFeeElement.textContent = data.commissionRates.seller + '%';
         }
     }
 
@@ -58,13 +138,21 @@
     }
 
     function formatCurrency(value) {
+        if (typeof value !== 'number' || isNaN(value)) {
+            value = 0;
+        }
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'USD'
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }).format(value);
     }
 
     function formatNumber(value) {
+        if (typeof value !== 'number' || isNaN(value)) {
+            value = 0;
+        }
         return new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 8

@@ -27,11 +27,11 @@
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <span class="text-muted">Account Type:</span>
-                            <span class="float-end">{{ .account.AccountType }}</span>
+                            <span class="float-end" data-field="account-type">{{ .account.AccountType }}</span>
                         </li>
                         <li class="mb-2">
                             <span class="text-muted">Trading Status:</span>
-                            <span class="float-end">
+                            <span class="float-end" data-field="trading-status">
                                 {{ if .account.CanTrade }}
                                     <span class="badge bg-success">Enabled</span>
                                 {{ else }}
@@ -41,7 +41,7 @@
                         </li>
                         <li class="mb-2">
                             <span class="text-muted">Withdrawals:</span>
-                            <span class="float-end">
+                            <span class="float-end" data-field="withdrawal-status">
                                 {{ if .account.CanWithdraw }}
                                     <span class="badge bg-success">Enabled</span>
                                 {{ else }}
@@ -55,7 +55,7 @@
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <span class="text-muted">Deposits:</span>
-                            <span class="float-end">
+                            <span class="float-end" data-field="deposit-status">
                                 {{ if .account.CanDeposit }}
                                     <span class="badge bg-success">Enabled</span>
                                 {{ else }}
@@ -65,7 +65,7 @@
                         </li>
                         <li class="mb-2">
                             <span class="text-muted">Self-Trade Prevention:</span>
-                            <span class="float-end">
+                            <span class="float-end" data-field="self-trade">
                                 {{ if .account.RequireSelfTradePrevention }}
                                     <span class="badge bg-warning">Required</span>
                                 {{ else }}
@@ -75,7 +75,7 @@
                         </li>
                         <li class="mb-2">
                             <span class="text-muted">Permissions:</span>
-                            <span class="float-end">
+                            <span class="float-end" data-field="permissions">
                                 {{ range .account.Permissions }}
                                     <span class="badge bg-info me-1">{{ . }}</span>
                                 {{ end }}
@@ -98,11 +98,11 @@
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <span class="text-muted">Maker Fee:</span>
-                            <span class="float-end">{{ .account.CommissionRates.Maker }}%</span>
+                            <span class="float-end" data-field="maker-fee">{{ .account.CommissionRates.Maker }}%</span>
                         </li>
                         <li class="mb-2">
                             <span class="text-muted">Taker Fee:</span>
-                            <span class="float-end">{{ .account.CommissionRates.Taker }}%</span>
+                            <span class="float-end" data-field="taker-fee">{{ .account.CommissionRates.Taker }}%</span>
                         </li>
                     </ul>
                 </div>
@@ -110,11 +110,11 @@
                     <ul class="list-unstyled">
                         <li class="mb-2">
                             <span class="text-muted">Buyer Fee:</span>
-                            <span class="float-end">{{ .account.CommissionRates.Buyer }}%</span>
+                            <span class="float-end" data-field="buyer-fee">{{ .account.CommissionRates.Buyer }}%</span>
                         </li>
                         <li class="mb-2">
                             <span class="text-muted">Seller Fee:</span>
-                            <span class="float-end">{{ .account.CommissionRates.Seller }}%</span>
+                            <span class="float-end" data-field="seller-fee">{{ .account.CommissionRates.Seller }}%</span>
                         </li>
                     </ul>
                 </div>

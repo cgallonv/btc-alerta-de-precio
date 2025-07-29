@@ -230,42 +230,33 @@ func (h *Handler) alertsPage(c *gin.Context) {
 // accountPage renders the account management page.
 // Route: GET /account
 func (h *Handler) accountPage(c *gin.Context) {
-	// Get API credentials from config
-	apiKey := h.configProvider.GetString("binance.api_key")
-	apiSecret := h.configProvider.GetString("binance.api_secret")
-
 	// Create Binance client
-	client := bitcoin.NewBinanceAccountClient(apiKey, apiSecret)
+	binanceClient := bitcoin.NewBinanceClient(
+		h.configProvider.GetString("binance.api_key"),
+		h.configProvider.GetString("binance.api_secret"),
+	)
 
-	// Get balance
-	balance, err := client.GetAccountBalance()
+	// Get account balance
+	balance, err := binanceClient.GetAccountBalance()
 	if err != nil {
 		log.Printf("Error getting account balance: %v", err)
-		c.HTML(http.StatusOK, "layout", gin.H{
-			"error":     "Error loading account data",
+		c.HTML(http.StatusInternalServerError, "layout", gin.H{
+			"error":     "Failed to get account balance",
 			"PageTitle": "Account",
 			"Version":   time.Now().Unix(),
 			"content":   "account",
-			"account": AccountData{
-				LastUpdated: time.Now(),
-			},
 		})
 		return
 	}
 
-	// Create account data structure
+	// Prepare account data
 	accountData := AccountData{
 		TotalBalance:     balance.TotalBalance,
 		AvailableBalance: balance.AvailableBalance,
 		LastUpdated:      balance.LastUpdated,
-		Assets:           make([]Asset, len(balance.Assets)),
+		Assets:           make([]Asset, 0, len(balance.Assets)),
 		Orders:           []Order{}, // TODO: Implement order history
-		Budget: Budget{
-			Used:            0,
-			Limit:           0,
-			UsagePercentage: 0,
-			Categories:      []Category{},
-		},
+		Budget:           Budget{},  // TODO: Implement budget history
 
 		// Binance API fields
 		MakerCommission:            balance.MakerCommission,
@@ -284,15 +275,15 @@ func (h *Handler) accountPage(c *gin.Context) {
 	}
 
 	// Convert assets
-	for i, asset := range balance.Assets {
-		accountData.Assets[i] = Asset{
+	for _, asset := range balance.Assets {
+		accountData.Assets = append(accountData.Assets, Asset{
 			Symbol:    asset.Symbol,
 			Free:      asset.Free,
 			Locked:    asset.Locked,
 			Total:     asset.Total,
 			ValueUSD:  asset.ValueUSD,
 			Change24h: asset.Change24h,
-		}
+		})
 	}
 
 	c.HTML(http.StatusOK, "layout", gin.H{
@@ -793,80 +784,27 @@ func (h *Handler) deleteAllAlerts(c *gin.Context) {
 	})
 }
 
+// GetAccountBalance returns the current account balance
 func (h *Handler) GetAccountBalance(c *gin.Context) {
-	// Get API credentials from config
-	apiKey := h.configProvider.GetString("binance.api_key")
-	apiSecret := h.configProvider.GetString("binance.api_secret")
-
-	log.Printf("API Key length: %d", len(apiKey))
-	log.Printf("API Secret length: %d", len(apiSecret))
-
-	if apiKey == "" || apiSecret == "" {
-		c.JSON(400, gin.H{
-			"success": false,
-			"error":   "Binance API credentials not configured",
-		})
-		return
-	}
-
 	// Create Binance client
-	client := bitcoin.NewBinanceAccountClient(apiKey, apiSecret)
+	binanceClient := bitcoin.NewBinanceClient(
+		h.configProvider.GetString("binance.api_key"),
+		h.configProvider.GetString("binance.api_secret"),
+	)
 
-	// Get balance
-	balance, err := client.GetAccountBalance()
+	// Get account balance
+	balance, err := binanceClient.GetAccountBalance()
 	if err != nil {
-		log.Printf("Error fetching balance: %v", err)
-		c.JSON(500, gin.H{
-			"success": false,
-			"error":   "Failed to fetch balance: " + err.Error(),
+		log.Printf("Error getting account balance: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Error:   err.Error(),
 		})
 		return
 	}
 
-	// Create account data structure
-	accountData := AccountData{
-		TotalBalance:     balance.TotalBalance,
-		AvailableBalance: balance.AvailableBalance,
-		LastUpdated:      balance.LastUpdated,
-		Assets:           make([]Asset, len(balance.Assets)),
-		Orders:           []Order{}, // TODO: Implement order history
-		Budget: Budget{
-			Used:            0,
-			Limit:           0,
-			UsagePercentage: 0,
-			Categories:      []Category{},
-		},
-
-		// Binance API fields
-		MakerCommission:            balance.MakerCommission,
-		TakerCommission:            balance.TakerCommission,
-		BuyerCommission:            balance.BuyerCommission,
-		SellerCommission:           balance.SellerCommission,
-		CommissionRates:            balance.CommissionRates,
-		CanTrade:                   balance.CanTrade,
-		CanWithdraw:                balance.CanWithdraw,
-		CanDeposit:                 balance.CanDeposit,
-		AccountType:                balance.AccountType,
-		Permissions:                balance.Permissions,
-		RequireSelfTradePrevention: balance.RequireSelfTradePrevention,
-		PreventSor:                 balance.PreventSor,
-		UpdateTime:                 balance.UpdateTime,
-	}
-
-	// Convert assets
-	for i, asset := range balance.Assets {
-		accountData.Assets[i] = Asset{
-			Symbol:    asset.Symbol,
-			Free:      asset.Free,
-			Locked:    asset.Locked,
-			Total:     asset.Total,
-			ValueUSD:  asset.ValueUSD,
-			Change24h: asset.Change24h,
-		}
-	}
-
-	c.JSON(200, gin.H{
-		"success": true,
-		"data":    accountData,
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Data:    balance,
 	})
 }

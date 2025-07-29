@@ -1,9 +1,12 @@
+// Package alerts provides functionality for monitoring Bitcoin prices
+// and managing price-based alerts.
 package alerts
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"btc-alerta-de-precio/internal/bitcoin"
@@ -13,41 +16,97 @@ import (
 	"btc-alerta-de-precio/internal/storage"
 )
 
-// AlertManager coordinates alert operations and integrates with price monitoring
+// AlertManager coordinates alert operations and integrates with price monitoring.
+// It manages price alerts, evaluates alert conditions, and sends notifications
+// when alerts are triggered.
+//
+// Example usage:
+//
+//	manager, err := NewAlertManager(configProvider, notificationSender, alertEvaluator, alertRepo, notificationRepo)
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	if err := manager.Start(context.Background()); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	defer manager.Stop()
 type AlertManager struct {
-	alertRepo          interfaces.AlertRepository
-	notificationRepo   interfaces.NotificationRepository
+	// Dependencies
+	binanceClient      *bitcoin.BinanceClient
+	configProvider     interfaces.ConfigProvider
 	notificationSender interfaces.NotificationSender
 	alertEvaluator     interfaces.AlertEvaluator
-	priceMonitor       *PriceMonitor
-	configProvider     interfaces.ConfigProvider
+	alertRepo          interfaces.AlertRepository
+	notificationRepo   interfaces.NotificationRepository
+
+	// Price monitoring
+	priceMonitor *PriceMonitor
+
+	// Alert processing
+	processingMux sync.RWMutex
+	isProcessing  bool
 }
 
-// NewAlertManager creates a new alert manager
+// NewAlertManager creates a new alert manager with the provided dependencies.
+// It initializes the Binance client and price monitor, and sets up price update callbacks.
+//
+// Example usage:
+//
+//	manager, err := NewAlertManager(
+//	    configProvider,
+//	    notificationSender,
+//	    alertEvaluator,
+//	    alertRepo,
+//	    notificationRepo,
+//	)
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func NewAlertManager(
-	alertRepo interfaces.AlertRepository,
-	notificationRepo interfaces.NotificationRepository,
+	configProvider interfaces.ConfigProvider,
 	notificationSender interfaces.NotificationSender,
 	alertEvaluator interfaces.AlertEvaluator,
-	priceMonitor *PriceMonitor,
-	configProvider interfaces.ConfigProvider,
-) *AlertManager {
-	am := &AlertManager{
-		alertRepo:          alertRepo,
-		notificationRepo:   notificationRepo,
+	alertRepo interfaces.AlertRepository,
+	notificationRepo interfaces.NotificationRepository,
+) (*AlertManager, error) {
+	// Create Binance client with API credentials
+	apiKey := configProvider.GetString("binance.api_key")
+	apiSecret := configProvider.GetString("binance.api_secret")
+	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret)
+
+	// Create price monitor
+	priceMonitor := NewPriceMonitor(configProvider, 20)
+
+	manager := &AlertManager{
+		binanceClient:      binanceClient,
+		configProvider:     configProvider,
 		notificationSender: notificationSender,
 		alertEvaluator:     alertEvaluator,
+		alertRepo:          alertRepo,
+		notificationRepo:   notificationRepo,
 		priceMonitor:       priceMonitor,
-		configProvider:     configProvider,
 	}
 
-	// Register for price updates (simplified callback)
-	priceMonitor.AddPriceUpdateCallback(am.onPriceUpdate)
+	// Register for price updates
+	priceMonitor.AddPriceUpdateCallback(manager.checkAlerts)
 
-	return am
+	return manager, nil
 }
 
-// Start begins alert monitoring
+// Start begins alert monitoring.
+// It starts the price monitor and begins evaluating alert conditions.
+//
+// Example usage:
+//
+//	ctx, cancel := context.WithCancel(context.Background())
+//	defer cancel()
+//	if err := manager.Start(ctx); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) Start(ctx context.Context) error {
 	log.Println("Starting Alert Manager...")
 
@@ -59,7 +118,12 @@ func (am *AlertManager) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops alert monitoring
+// Stop stops alert monitoring.
+// It stops the price monitor and cleans up resources.
+//
+// Example usage:
+//
+//	defer manager.Stop()
 func (am *AlertManager) Stop() error {
 	log.Println("Stopping Alert Manager...")
 
@@ -70,22 +134,24 @@ func (am *AlertManager) Stop() error {
 	return nil
 }
 
-// IsMonitoring returns true if alert monitoring is active
+// IsMonitoring returns true if alert monitoring is active.
+//
+// Example usage:
+//
+//	if manager.IsMonitoring() {
+//	    log.Printf("Alert monitoring is active")
+//	}
 func (am *AlertManager) IsMonitoring() bool {
 	return am.priceMonitor.IsMonitoring()
 }
 
-// onPriceUpdate is called when price is updated by the price monitor (simplified)
-func (am *AlertManager) onPriceUpdate(current *bitcoin.PriceData) {
-	if current == nil {
+// checkAlerts evaluates all active alerts against current price data.
+// It is called automatically when new price data is available.
+func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
+	if priceData == nil {
 		return
 	}
 
-	am.checkAlerts(current)
-}
-
-// checkAlerts evaluates all active alerts against current price data
-func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
 	alerts, err := am.alertRepo.GetActiveAlerts()
 	if err != nil {
 		log.Printf("Error fetching active alerts: %v", err)
@@ -94,20 +160,21 @@ func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
 
 	for _, alert := range alerts {
 		if am.alertEvaluator.ShouldTrigger(&alert, priceData) {
-			if err := am.triggerAlert(&alert, priceData.Price); err != nil {
+			if err := am.triggerAlert(&alert, priceData); err != nil {
 				log.Printf("Error triggering alert %d: %v", alert.ID, err)
 			}
 		}
 	}
 }
 
-// triggerAlert processes an alert trigger
-func (am *AlertManager) triggerAlert(alert *storage.Alert, currentPrice float64) error {
+// triggerAlert processes an alert trigger.
+// It marks the alert as triggered, sends notifications, and logs the event.
+func (am *AlertManager) triggerAlert(alert *storage.Alert, priceData *bitcoin.PriceData) error {
 	if alert == nil {
 		return fmt.Errorf("alert is nil")
 	}
 
-	log.Printf("🚨 Triggering alert: %s (Price: $%.2f)", alert.Name, currentPrice)
+	log.Printf("🚨 Triggering alert: %s (Price: $%.2f)", alert.Name, priceData.Price)
 
 	// Mark alert as triggered
 	alert.MarkTriggered()
@@ -117,76 +184,72 @@ func (am *AlertManager) triggerAlert(alert *storage.Alert, currentPrice float64)
 
 	// Prepare notification data
 	notificationData := &notifications.NotificationData{
-		Title:   fmt.Sprintf("🚨 Bitcoin Alert: %s", alert.Name),
-		Message: am.generateAlertMessage(alert, currentPrice),
-		Price:   currentPrice,
-		Alert:   alert,
+		Title:         fmt.Sprintf("🚨 Bitcoin Alert: %s", alert.Name),
+		Message:       fmt.Sprintf("Bitcoin price: $%.2f (%+.2f%%)", priceData.Price, priceData.PriceChangePercent),
+		Price:         priceData.Price,
+		Alert:         alert,
+		AlertID:       alert.ID,
+		AlertName:     alert.Name,
+		AlertType:     alert.Type,
+		Percentage:    priceData.PriceChangePercent,
+		Email:         alert.Email,
+		EnableEmail:   alert.EnableEmail,
+		EnableWebPush: alert.EnableWebPush,
 	}
 
 	// Send notification
 	if err := am.notificationSender.SendAlert(notificationData); err != nil {
-		log.Printf("Error sending notification for alert %s: %v", alert.Name, err)
-
 		// Log notification failure
-		am.logNotification(alert.ID, "error", err.Error())
+		notificationLog := &storage.NotificationLog{
+			AlertID:   alert.ID,
+			Type:      "error",
+			Status:    "failed",
+			Message:   "Failed to send notification",
+			Error:     err.Error(),
+			Price:     priceData.Price,
+			SentAt:    time.Now(),
+			Timestamp: time.Now(),
+		}
+		if err := am.notificationRepo.LogNotification(notificationLog); err != nil {
+			log.Printf("Error logging notification failure: %v", err)
+		}
 
 		return errors.WrapError(err, "NOTIFICATION_SEND_ERROR", "Failed to send alert notification")
 	}
 
-	log.Printf("✅ Notification sent successfully for alert: %s", alert.Name)
-
 	// Log successful notification
-	am.logNotification(alert.ID, "sent", "Notification sent successfully")
+	notificationLog := &storage.NotificationLog{
+		AlertID:   alert.ID,
+		Type:      "success",
+		Status:    "sent",
+		Message:   "Notification sent successfully",
+		Price:     priceData.Price,
+		SentAt:    time.Now(),
+		Timestamp: time.Now(),
+	}
+	if err := am.notificationRepo.LogNotification(notificationLog); err != nil {
+		log.Printf("Error logging successful notification: %v", err)
+	}
 
 	return nil
 }
 
-// generateAlertMessage creates the notification message based on alert type
-func (am *AlertManager) generateAlertMessage(alert *storage.Alert, currentPrice float64) string {
-	var message string
-	switch alert.Type {
-	case "above":
-		message = fmt.Sprintf("Bitcoin price has exceeded $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
-	case "below":
-		message = fmt.Sprintf("Bitcoin price has fallen below $%.2f. Current price: $%.2f", alert.TargetPrice, currentPrice)
-	case "change":
-		// Use the 24h percentage change from Binance for the message
-		lastPrice := am.priceMonitor.GetLastPrice()
-		if lastPrice != nil && lastPrice.Source == "Binance" {
-			changePercent := lastPrice.PriceChangePercent
-			direction := "increased"
-			if changePercent < 0 {
-				direction = "decreased"
-				changePercent = -changePercent
-			}
-			message = fmt.Sprintf("Bitcoin price has %s %.2f%% (24h). Current price: $%.2f", direction, changePercent, currentPrice)
-		} else {
-			message = fmt.Sprintf("Significant Bitcoin price change detected. Current price: $%.2f", currentPrice)
-		}
-	default:
-		message = fmt.Sprintf("Bitcoin alert triggered. Current price: $%.2f", currentPrice)
-	}
-
-	// Agregar el nombre de la alerta al principio del mensaje
-	return fmt.Sprintf("🔔 %s\n%s", alert.Name, message)
-}
-
-// logNotification logs notification attempts
-func (am *AlertManager) logNotification(alertID uint, status, message string) {
-	notificationLog := &storage.NotificationLog{
-		AlertID: alertID,
-		Type:    "combined", // email + desktop + web push
-		Status:  status,
-		Message: message,
-		SentAt:  time.Now(),
-	}
-
-	if err := am.notificationRepo.LogNotification(notificationLog); err != nil {
-		log.Printf("Error logging notification: %v", err)
-	}
-}
-
 // CRUD operations for alerts
+
+// CreateAlert creates a new alert.
+//
+// Example usage:
+//
+//	alert := &storage.Alert{
+//	    Name: "Price above $50,000",
+//	    Type: "above",
+//	    TargetPrice: 50000,
+//	    IsActive: true,
+//	}
+//	if err := manager.CreateAlert(alert); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) CreateAlert(alert *storage.Alert) error {
 	if err := am.alertRepo.CreateAlert(alert); err != nil {
 		return errors.WrapError(err, "CREATE_ALERT_ERROR", "Failed to create alert")
@@ -194,6 +257,16 @@ func (am *AlertManager) CreateAlert(alert *storage.Alert) error {
 	return nil
 }
 
+// GetAlert retrieves an alert by ID.
+//
+// Example usage:
+//
+//	alert, err := manager.GetAlert(123)
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	log.Printf("Alert: %s", alert.Name)
 func (am *AlertManager) GetAlert(id uint) (*storage.Alert, error) {
 	alert, err := am.alertRepo.GetAlert(id)
 	if err != nil {
@@ -202,6 +275,18 @@ func (am *AlertManager) GetAlert(id uint) (*storage.Alert, error) {
 	return alert, nil
 }
 
+// GetAlerts retrieves all alerts.
+//
+// Example usage:
+//
+//	alerts, err := manager.GetAlerts()
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	for _, alert := range alerts {
+//	    log.Printf("Alert: %s", alert.Name)
+//	}
 func (am *AlertManager) GetAlerts() ([]storage.Alert, error) {
 	alerts, err := am.alertRepo.GetAlerts()
 	if err != nil {
@@ -210,6 +295,15 @@ func (am *AlertManager) GetAlerts() ([]storage.Alert, error) {
 	return alerts, nil
 }
 
+// UpdateAlert updates an existing alert.
+//
+// Example usage:
+//
+//	alert.TargetPrice = 55000
+//	if err := manager.UpdateAlert(alert); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) UpdateAlert(alert *storage.Alert) error {
 	if err := am.alertRepo.UpdateAlert(alert); err != nil {
 		return errors.WrapError(err, "UPDATE_ALERT_ERROR", "Failed to update alert").WithField("alert_id", alert.ID)
@@ -217,6 +311,14 @@ func (am *AlertManager) UpdateAlert(alert *storage.Alert) error {
 	return nil
 }
 
+// DeleteAlert deletes an alert by ID.
+//
+// Example usage:
+//
+//	if err := manager.DeleteAlert(123); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) DeleteAlert(id uint) error {
 	if err := am.alertRepo.DeleteAlert(id); err != nil {
 		return errors.WrapError(err, "DELETE_ALERT_ERROR", "Failed to delete alert").WithField("alert_id", id)
@@ -224,6 +326,14 @@ func (am *AlertManager) DeleteAlert(id uint) error {
 	return nil
 }
 
+// ToggleAlert toggles an alert's active state.
+//
+// Example usage:
+//
+//	if err := manager.ToggleAlert(123); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) ToggleAlert(id uint) error {
 	if err := am.alertRepo.ToggleAlert(id); err != nil {
 		return errors.WrapError(err, "TOGGLE_ALERT_ERROR", "Failed to toggle alert").WithField("alert_id", id)
@@ -231,6 +341,14 @@ func (am *AlertManager) ToggleAlert(id uint) error {
 	return nil
 }
 
+// ResetAlert resets a triggered alert so it can be triggered again.
+//
+// Example usage:
+//
+//	if err := manager.ResetAlert(123); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) ResetAlert(alertID uint) error {
 	alert, err := am.alertRepo.GetAlert(alertID)
 	if err != nil {
@@ -247,50 +365,118 @@ func (am *AlertManager) ResetAlert(alertID uint) error {
 	return nil
 }
 
+// TestAlert sends a test notification for an alert.
+//
+// Example usage:
+//
+//	if err := manager.TestAlert(123); err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
 func (am *AlertManager) TestAlert(id uint) error {
 	alert, err := am.alertRepo.GetAlert(id)
 	if err != nil {
 		return errors.WrapError(err, "TEST_ALERT_ERROR", "Alert not found").WithField("alert_id", id)
 	}
 
-	lastPrice := am.priceMonitor.GetLastPrice()
-	if lastPrice == nil {
-		return errors.NewAppError("TEST_ALERT_NO_PRICE", "No current price data available")
+	// Get current price for test notification
+	priceData, err := am.GetCurrentPrice()
+	if err != nil {
+		return errors.WrapError(err, "TEST_ALERT_ERROR", "Failed to get current price")
 	}
 
-	// Create test alert (copy original but mark as test)
-	testAlert := *alert
-	testAlert.Name = "🧪 TEST: " + alert.Name
-
+	// Send test notification
 	notificationData := &notifications.NotificationData{
-		Title:   fmt.Sprintf("🧪 Test Alert: %s", alert.Name),
-		Message: fmt.Sprintf("This is a test of alert '%s'. Current price: $%.2f", alert.Name, lastPrice.Price),
-		Price:   lastPrice.Price,
-		Alert:   &testAlert,
+		Title:         fmt.Sprintf("🧪 Test Alert: %s", alert.Name),
+		Message:       fmt.Sprintf("This is a test of alert '%s'. Current price: $%.2f (%+.2f%%)", alert.Name, priceData.Price, priceData.PriceChangePercent),
+		Price:         priceData.Price,
+		Alert:         alert,
+		AlertID:       alert.ID,
+		AlertName:     alert.Name,
+		AlertType:     alert.Type,
+		Percentage:    priceData.PriceChangePercent,
+		Email:         alert.Email,
+		EnableEmail:   alert.EnableEmail,
+		EnableWebPush: alert.EnableWebPush,
+		IsTest:        true,
 	}
 
 	if err := am.notificationSender.SendAlert(notificationData); err != nil {
-		return errors.WrapError(err, "TEST_ALERT_SEND_ERROR", "Failed to send test notification")
+		return errors.WrapError(err, "TEST_ALERT_ERROR", "Failed to send test notification")
 	}
 
 	return nil
 }
 
-// GetCurrentPrice returns current price from price monitor
+// Price-related methods
+
+// GetCurrentPrice returns the current Bitcoin price.
+//
+// Example usage:
+//
+//	price, err := manager.GetCurrentPrice()
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	log.Printf("Current price: $%.2f", price.Price)
 func (am *AlertManager) GetCurrentPrice() (*bitcoin.PriceData, error) {
-	price := am.priceMonitor.GetLastPrice()
-	if price == nil {
-		return nil, errors.NewAppError("NO_CURRENT_PRICE", "No current price data available")
-	}
-	return price, nil
+	return am.binanceClient.GetCurrentPrice()
 }
 
-// GetCurrentPercentage returns current percentage change
+// GetPriceHistory returns the price history.
+//
+// Example usage:
+//
+//	history, err := manager.GetPriceHistory(24)
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	for _, entry := range history {
+//	    log.Printf("Price at %s: $%.2f", entry.Timestamp, entry.Price)
+//	}
+func (am *AlertManager) GetPriceHistory(limit int) ([]interfaces.PriceCacheEntry, error) {
+	return am.priceMonitor.GetPriceHistory(limit), nil
+}
+
+// GetCurrentPercentage returns the current price change percentage.
+//
+// Example usage:
+//
+//	change := manager.GetCurrentPercentage()
+//	log.Printf("24h change: %+.2f%%", change)
 func (am *AlertManager) GetCurrentPercentage() float64 {
 	return am.priceMonitor.GetCurrentPercentage()
 }
 
-// GetPriceHistory returns cached price history
-func (am *AlertManager) GetPriceHistory(limit int) []interfaces.PriceCacheEntry {
-	return am.priceMonitor.GetPriceHistory(limit)
+// System operations
+
+// GetStats returns system statistics including current price and active alerts.
+//
+// Example usage:
+//
+//	stats, err := manager.GetStats()
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+//	log.Printf("Active alerts: %d", stats["active_alerts"])
+func (am *AlertManager) GetStats() (map[string]interface{}, error) {
+	stats := make(map[string]interface{})
+
+	// Get current price
+	price, err := am.GetCurrentPrice()
+	if err == nil {
+		stats["current_price"] = price.Price
+		stats["price_change"] = price.PriceChangePercent
+	}
+
+	// Get active alerts count
+	alerts, err := am.alertRepo.GetActiveAlerts()
+	if err == nil {
+		stats["active_alerts"] = len(alerts)
+	}
+
+	return stats, nil
 }

@@ -49,7 +49,9 @@ type NotificationLog struct {
 	Status    string    `json:"status" gorm:"not null"` // "sent", "failed", "pending"
 	Message   string    `json:"message"`
 	Error     string    `json:"error"`
+	Price     float64   `json:"price"`
 	SentAt    time.Time `json:"sent_at"`
+	Timestamp time.Time `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`
 
 	// Relación con Alert

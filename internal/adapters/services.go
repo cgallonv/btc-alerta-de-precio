@@ -1,6 +1,7 @@
 package adapters
 
 import (
+	"fmt"
 	"time"
 
 	"btc-alerta-de-precio/config"
@@ -11,39 +12,28 @@ import (
 	"btc-alerta-de-precio/internal/storage"
 )
 
-// BitcoinClientAdapter adapts bitcoin.Client to implement PriceClient interface.
-//
-// Example usage:
-//
-//	adapter := NewBitcoinClientAdapter(client)
-//	price, err := adapter.GetCurrentPrice()
-type BitcoinClientAdapter struct {
-	client *bitcoin.Client
+// PriceClientAdapter adapts the bitcoin.BinanceClient to the interfaces.PriceClient interface
+type PriceClientAdapter struct {
+	client *bitcoin.BinanceClient
 }
 
-// NewBitcoinClientAdapter creates a new BitcoinClientAdapter.
-//
-// Example usage:
-//
-//	adapter := NewBitcoinClientAdapter(client)
-func NewBitcoinClientAdapter(client *bitcoin.Client) interfaces.PriceClient {
-	return &BitcoinClientAdapter{client: client}
+// NewPriceClientAdapter creates a new price client adapter
+func NewPriceClientAdapter(configProvider interfaces.ConfigProvider) *PriceClientAdapter {
+	apiKey := configProvider.GetString("binance.api_key")
+	apiSecret := configProvider.GetString("binance.api_secret")
+	client := bitcoin.NewBinanceClient(apiKey, apiSecret)
+	return &PriceClientAdapter{client: client}
 }
 
-func (a *BitcoinClientAdapter) GetCurrentPrice() (*bitcoin.PriceData, error) {
-	price, err := a.client.GetCurrentPrice()
-	if err != nil {
-		return nil, errors.WrapError(err, "BITCOIN_CLIENT_ERROR", "Failed to get current price")
-	}
-	return price, nil
+// GetCurrentPrice implements interfaces.PriceClient
+func (a *PriceClientAdapter) GetCurrentPrice() (*bitcoin.PriceData, error) {
+	return a.client.GetCurrentPrice()
 }
 
-func (a *BitcoinClientAdapter) GetPriceHistory(days int) ([]bitcoin.PriceData, error) {
-	history, err := a.client.GetPriceHistory(days)
-	if err != nil {
-		return nil, errors.WrapError(err, "BITCOIN_CLIENT_HISTORY_ERROR", "Failed to get price history")
-	}
-	return history, nil
+// GetPriceHistory implements interfaces.PriceClient
+func (a *PriceClientAdapter) GetPriceHistory(days int) ([]bitcoin.PriceData, error) {
+	// Not implemented in Binance client yet
+	return nil, fmt.Errorf("price history not implemented")
 }
 
 // NotificationServiceAdapter adapts notifications.Service to implement NotificationSender interface.

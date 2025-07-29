@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"btc-alerta-de-precio/config"
 	"btc-alerta-de-precio/internal/adapters"
@@ -18,122 +14,91 @@ import (
 	"btc-alerta-de-precio/internal/interfaces"
 	"btc-alerta-de-precio/internal/notifications"
 	"btc-alerta-de-precio/internal/storage"
-
-	"github.com/gin-gonic/gin"
 )
 
 // AlertServiceAdapter adapts AlertManager to AlertService interface
 type AlertServiceAdapter struct {
 	*alerts.AlertManager
-	statsRepo *adapters.GormStatsRepository
+	db *storage.Database
 }
 
 func (a *AlertServiceAdapter) GetPriceHistory(limit int) ([]interfaces.PriceCacheEntry, error) {
-	return a.AlertManager.GetPriceHistory(limit), nil
+	history, err := a.AlertManager.GetPriceHistory(limit)
+	return history, err
 }
 
 func (a *AlertServiceAdapter) GetStats() (map[string]interface{}, error) {
-	return a.statsRepo.GetStats()
+	return a.db.GetStats()
+}
+
+// AlertEvaluator implements the AlertEvaluator interface
+type AlertEvaluator struct{}
+
+func (e *AlertEvaluator) ShouldTrigger(alert *storage.Alert, priceData *bitcoin.PriceData) bool {
+	return alert.ShouldTrigger(priceData.Price, 0)
 }
 
 func main() {
+	// Set Gin to release mode
+	gin.SetMode(gin.ReleaseMode)
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Error loading configuration: %v", err)
+		log.Fatalf("Error loading config: %v", err)
 	}
 
 	// Initialize database
 	db, err := storage.NewDatabase(cfg.DatabasePath)
 	if err != nil {
-		log.Fatalf("Error connecting to database: %v", err)
+		log.Fatalf("Error initializing database: %v", err)
 	}
 
-	// Create repository adapters
-	alertRepo := adapters.NewGormAlertRepository(db)
-	notificationRepo := adapters.NewGormNotificationRepository(db)
-	statsRepo := adapters.NewGormStatsRepository(db)
+	// Create adapters
+	configAdapter := adapters.NewConfigAdapter(cfg)
 
-	// Create service adapters
-	bitcoinClient := bitcoin.NewClient()
-	priceClient := adapters.NewBitcoinClientAdapter(bitcoinClient)
+	// Create services
 	notificationService := notifications.NewService(cfg, db)
-	notificationSender := adapters.NewNotificationServiceAdapter(notificationService)
-	configProvider := adapters.NewConfigAdapter(cfg)
-	alertEvaluator := adapters.NewAlertEvaluator()
 
-	// Create new refactored services with cache (20 entries for price history)
-	priceMonitor := alerts.NewPriceMonitor(priceClient, configProvider, 20)
-	alertManager := alerts.NewAlertManager(
-		alertRepo,
-		notificationRepo,
-		notificationSender,
-		alertEvaluator,
-		priceMonitor,
-		configProvider,
+	// Create price monitor
+	priceMonitor := alerts.NewPriceMonitor(configAdapter, 20)
+
+	// Create alert manager
+	alertManager, err := alerts.NewAlertManager(
+		configAdapter,
+		notificationService,
+		&AlertEvaluator{},
+		db,
+		db,
 	)
-
-	// Create main context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Start alert manager (which starts price monitoring)
-	if err := alertManager.Start(ctx); err != nil {
-		log.Fatalf("Error starting alert manager: %v", err)
+	if err != nil {
+		log.Fatalf("Error creating alert manager: %v", err)
 	}
 
-	// Set Gin to release mode
-	gin.SetMode(gin.ReleaseMode)
-
-	// Configure and start web server
-	router := gin.Default()
-
-	// Create API handler with adapter
+	// Create alert service adapter
 	alertService := &AlertServiceAdapter{
 		AlertManager: alertManager,
-		statsRepo:    statsRepo.(*adapters.GormStatsRepository),
-	}
-	apiHandler := api.NewHandler(alertService, configProvider)
-	apiHandler.SetupRoutes(router)
-
-	// Create HTTP server
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", cfg.Port),
-		Handler: router,
+		db:           db,
 	}
 
-	// Graceful shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	// Create API handler
+	handler := api.NewHandler(alertService, configAdapter)
 
-	go func() {
-		log.Printf("🚀 Server starting on port %s", cfg.Port)
-		log.Printf("📊 Visit http://localhost:%s for the web interface", cfg.Port)
-		log.Printf("🔔 Bitcoin price monitoring is active every %v", cfg.CheckInterval)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Error starting server: %v", err)
-		}
-	}()
+	// Create router
+	router := gin.Default()
 
-	<-quit
-	log.Println("Shutting down server...")
+	// Configure router
+	handler.SetupRoutes(router)
 
-	// Stop alert manager
-	if err := alertManager.Stop(); err != nil {
-		log.Printf("Error stopping alert manager: %v", err)
+	// Start price monitoring
+	if err := priceMonitor.Start(context.Background()); err != nil {
+		log.Printf("Error starting price monitor: %v", err)
 	}
 
-	// Stop price monitor
-	if err := priceMonitor.Stop(); err != nil {
-		log.Printf("Error stopping price monitor: %v", err)
+	// Start server
+	port := cfg.Port
+	log.Printf("🚀 Server starting on port %s", port)
+	if err := router.Run(":" + port); err != nil {
+		log.Fatalf("Error starting server: %v", err)
 	}
-
-	// Shutdown server
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("Error shutting down server: %v", err)
-	}
-
-	log.Println("✅ Server shutdown complete")
 }

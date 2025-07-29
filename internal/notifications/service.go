@@ -17,10 +17,18 @@ type Service struct {
 }
 
 type NotificationData struct {
-	Title   string
-	Message string
-	Price   float64
-	Alert   *storage.Alert
+	Title         string
+	Message       string
+	Price         float64
+	Alert         *storage.Alert
+	IsTest        bool
+	AlertID       uint
+	AlertName     string
+	AlertType     string
+	Percentage    float64
+	Email         string
+	EnableEmail   bool
+	EnableWebPush bool
 }
 
 func NewService(cfg *config.Config, db *storage.Database) *Service {
