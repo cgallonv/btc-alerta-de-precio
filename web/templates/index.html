@@ -138,9 +138,6 @@
                 <span class="nav-text text-white me-3">
                     <i class="fas fa-chart-line"></i> Actualización cada 15s
                 </span>
-                <button id="webPushToggle" class="btn btn-success btn-sm" style="display: none;">
-                    <i class="fas fa-bell"></i> Activar Web Push
-                </button>
             </div>
         </div>
     </nav>
@@ -209,17 +206,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                .then(registration => {
-                    console.log('✅ Service Worker registrado en la raíz:', registration);
-                })
-                .catch(error => {
-                    console.error('❌ Error registrando Service Worker:', error);
-                });
-        }
-    </script>
 </body>
 </html>
 {{ end }} 

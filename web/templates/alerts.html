@@ -84,12 +84,6 @@
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableWebPush" checked>
-                                    <label class="form-check-label">
-                                        <i class="fas fa-globe text-warning"></i> Notificación Web Push (Chrome)
-                                    </label>
-                                </div>
-                                <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="enableWhatsApp">
                                     <label class="form-check-label">
                                         <i class="fab fa-whatsapp text-success"></i> Notificación por WhatsApp
@@ -159,17 +153,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                .then(registration => {
-                    console.log('✅ Service Worker registrado en la raíz:', registration);
-                })
-                .catch(error => {
-                    console.error('❌ Error registrando Service Worker:', error);
-                });
-        }
-    </script>
 </body>
 </html>
 {{ end }} 
