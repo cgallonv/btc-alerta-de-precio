@@ -1,0 +1,133 @@
+## Architecture Patterns:
+- Follow generals rules [generals.mdc](../generals.mdc)
+
+### 1. General Rules
+- Apply **Clean Architecture** by structuring code into layers: API, domain, services, and adapters.
+- Use **domain-driven design** principles where applicable.
+- Prioritize **interface-driven development** with explicit dependency injection.
+- Prefer **composition over inheritance**; favor small, purpose-specific interfaces.
+- Ensure that all public functions interact with interfaces, not concrete types.
+
+### 2. Layer Responsibilities
+- **API (internal/api):** Handle HTTP requests, input validation, and response formatting.
+- **Domain (internal/bitcoin, internal/alerts):** Core business logic and entities.
+- **Services (internal/notifications):** Application services and business workflows.
+- **Adapters (internal/adapters):** External integrations (email, Telegram, WhatsApp).
+
+### 3. Project Structure
+```
+/
+├── config/             # Configuration management
+├── internal/
+│   ├── adapters/      # External service integrations
+│   ├── alerts/        # Alert domain and monitoring
+│   ├── api/           # HTTP handlers and routing
+│   ├── bitcoin/       # Bitcoin price domain
+│   ├── errors/        # Custom error types
+│   ├── interfaces/    # Core interfaces
+│   ├── mocks/         # Test mocks
+│   ├── notifications/ # Notification strategies
+│   └── storage/       # Data persistence
+├── web/
+│   ├── static/        # Static assets
+│   │   ├── images/    # Image assets
+│   │   └── js/        # JavaScript files
+│   └── templates/     # HTML templates
+│       └── partials/  # Reusable template parts
+└── scripts/           # Development and deployment scripts
+```
+
+### 4. Common Anti-Patterns
+- Do **not** put business logic in API handlers.
+- Do **not** couple domain and adapters layers.
+- Do **not** expose infrastructure details within domain logic.
+- Do **not** couple business logic to external services.
+- Do **not** use global state; always inject dependencies.
+
+### 5. Design Examples
+
+#### Interface Definition Example
+```go
+// PriceMonitor manages Bitcoin price monitoring
+type PriceMonitor interface {
+    Start(ctx context.Context) error
+    Stop() error
+    GetCurrentPrice() float64
+}
+
+// AlertService manages price alerts
+type AlertService interface {
+    CreateAlert(ctx context.Context, alert *Alert) error
+    CheckAlerts(ctx context.Context, price float64) error
+}
+```
+
+#### Sequence Diagram Example
+```mermaid
+sequenceDiagram
+    participant API as API Handler
+    participant Monitor as Price Monitor
+    participant Service as Alert Service
+    participant Notify as Notification Service
+    
+    API->>Monitor: GetCurrentPrice()
+    Monitor-->>API: Price
+    API->>Service: CheckAlerts(price)
+    Service->>Notify: SendNotification(alert)
+    Notify-->>Service: OK
+    Service-->>API: Alerts Checked
+```
+
+#### WebSocket Price Updates Diagram
+```mermaid
+sequenceDiagram
+    participant Client as WebSocket Client
+    participant WS as WebSocket Handler
+    participant Monitor as Price Monitor
+    participant BTC as Bitcoin API
+    
+    Client->>WS: Connect to /ws/price
+    WS->>Client: Connection Established
+    loop Every 15 seconds
+        Monitor->>BTC: GetCurrentPrice()
+        BTC-->>Monitor: Price
+        Monitor->>WS: Broadcast Price
+        WS->>Client: Price Update
+    end
+    Client->>WS: Close Connection
+    WS->>Client: Connection Closed
+```
+
+#### Component Diagram Example
+```mermaid
+C4Context
+    title Bitcoin Price Alert System
+    Person(user, "Usuario")
+    System_Boundary(s1, "Bitcoin Price Alert") {
+        Container(api, "API", "Go/Gin", "Maneja peticiones HTTP")
+        Container(monitor, "Price Monitor", "Go", "Monitorea precios BTC")
+        Container(alerts, "Alert Service", "Go", "Gestiona alertas")
+        Container(notify, "Notification Service", "Go", "Envía notificaciones")
+    }
+    System_Ext(btc, "Bitcoin API")
+    System_Ext(email, "Email Service")
+    System_Ext(telegram, "Telegram API")
+    System_Ext(whatsapp, "WhatsApp API")
+    
+    Rel(user, api, "Uses")
+    Rel(monitor, btc, "Gets prices")
+    Rel(notify, email, "Sends emails")
+    Rel(notify, telegram, "Sends messages")
+    Rel(notify, whatsapp, "Sends messages")
+```
+
+### 6. Architecture Review Checklist
+- [ ] Are responsibilities clearly separated by layer?
+- [ ] Are dependencies injected via interfaces?
+- [ ] Is there no business logic in API handlers?
+- [ ] Are diagrams up to date and clear?
+- [ ] Are anti-patterns avoided?
+- [ ] Is the folder structure consistent?
+- [ ] Are interfaces and dependency injection used everywhere?
+- [ ] Is the domain layer free of external dependencies?
+- [ ] Are diagrams included in documentation when needed?

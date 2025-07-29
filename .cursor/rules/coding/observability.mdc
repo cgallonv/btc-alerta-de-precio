@@ -1,0 +1,63 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Observability Layer Structure (Metrics & Logging)
+- Follow generals rules [generals.mdc](mdc:go/web-clean-arch/{{cookiecutter.repo_name}}/.{{cookiecutter.genai_ide}}/rules/generals.mdc)
+
+### 1. General Principles
+- Observability components (metrics, logging, tracing) must be decoupled from business logic and injected via interfaces.
+- Use a provider pattern: create agnostic providers for external tools (e.g., fury_go-core) in `/adapters/providers/`, and domain-specific adapters in `/adapters/metrics/` or `/adapters/logging/`.
+- All dependencies must be injected (never global state).
+- All adapters and providers must be mockable for testing.
+
+### 2. Folder Structure
+```
+/internal/infrastructure/adapters/
+  /providers/
+    /metrics/
+      fury_metrics_provider.go
+      mocks/
+        fury_metrics_provider_mock.go
+    /logging/
+      fury_logger_provider.go
+      mocks/
+        fury_logger_provider_mock.go
+  /metrics/
+    account_metrics.go
+    mocks/
+      account_metrics_mock.go
+  /logging/
+    app_logger.go
+    mocks/
+      app_logger_mock.go
+```
+
+### 3. Metrics Example
+- **Provider:** `/adapters/providers/metrics/fury_metrics_provider.go` encapsulates the integration with `fury_go-core/pkg/telemetry` and exposes generic metric creation methods.
+- **Domain Adapter:** `/adapters/metrics/account_metrics.go` defines and exposes business/domain-specific metrics using the provider.
+
+### 4. Logging Example
+- **Provider:** `/adapters/providers/logging/fury_logger_provider.go` encapsulates the integration with `fury_go-core/pkg/log` and exposes a generic logger interface.
+- **Domain Adapter:** `/adapters/logging/app_logger.go` implements the logger interface for application-wide use, and can be extended for domain-specific loggers if needed.
+
+### 5. Dependency Injection
+- Providers are initialized in the application wiring (`/internal/app/application.go`) and injected into adapters, usecases, or handlers as needed.
+- Example:
+```go
+// application.go
+metricsProvider := metricsprovider.NewFuryMetricsProvider()
+accountMetrics := metricsadapter.NewAccountMetrics(metricsProvider)
+loggerProvider := loggingprovider.NewFuryLoggerProvider()
+appLogger := loggingadapter.NewAppLogger(loggerProvider)
+```
+
+### 6. Testing
+- All providers and adapters must have mocks in their respective `/mocks` folders.
+- Use these mocks in unit tests for usecases, handlers, and adapters.
+
+### 7. Key Guidelines
+- Never use the external library (e.g., fury_go-core) directly in domain, usecase, or handler layers.
+- Always depend on interfaces, not concrete implementations.
+- All observability logic must be testable and replaceable.

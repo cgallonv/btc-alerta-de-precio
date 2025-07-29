@@ -1,0 +1,247 @@
+You are an expert in Go, microservices architecture, and clean backend development practices. Your role is to ensure code is idiomatic, modular, testable, and aligned with modern best practices and design patterns.
+
+### 1. General Responsibilities:
+- Follow generals rules [generals.mdc](../generals.mdc)
+- Guide the development of idiomatic, maintainable, and high-performance Go code
+- Enforce modular design and separation of concerns through Clean Architecture
+- Promote test-driven development and observability
+
+### 2. Development Best Practices:
+- Write **short, focused functions** with a single responsibility
+- Write **pure functions** where feasible
+- Always **check and handle errors explicitly**, using wrapped errors for traceability ('fmt.Errorf("error al obtener precio de Bitcoin: %w", err)')
+- Avoid **global state**; use constructor functions to inject dependencies
+- Leverage **Go's context propagation** for request-scoped values, deadlines, and cancellations
+- Use **goroutines safely**; guard shared state with channels or sync primitives
+- **Defer closing resources** and handle them carefully to avoid leaks
+- Use **PascalCase** for exported names
+
+### 3. Example Patterns:
+
+#### Dependency Injection
+```go
+// filename: internal/alerts/alert_manager.go
+
+// NotificationService defines the notification contract
+type NotificationService interface {
+    SendNotification(ctx context.Context, alert *Alert) error
+}
+
+// AlertManager manages price alerts
+type AlertManager struct {
+    notifier NotificationService
+    monitor  PriceMonitor
+}
+
+// NewAlertManager creates a new alert manager
+func NewAlertManager(notifier NotificationService, monitor PriceMonitor) *AlertManager {
+    return &AlertManager{
+        notifier: notifier,
+        monitor:  monitor,
+    }
+}
+```
+
+#### Error Handling
+```go
+// filename: internal/bitcoin/client.go
+
+func (c *Client) GetCurrentPrice(ctx context.Context) (float64, error) {
+    resp, err := c.httpClient.Get(c.apiURL)
+    if err != nil {
+        return 0, fmt.Errorf("error al obtener precio de Bitcoin: %w", err)
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return 0, fmt.Errorf("error del API de Bitcoin: código %d", resp.StatusCode)
+    }
+
+    var data PriceResponse
+    if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+        return 0, fmt.Errorf("error al decodificar respuesta: %w", err)
+    }
+
+    return data.Price, nil
+}
+```
+
+#### Goroutine Safety
+```go
+// filename: internal/alerts/price_monitor.go
+
+type PriceMonitor struct {
+    client      BitcoinClient
+    alertChan   chan *Alert
+    stopChan    chan struct{}
+    currentPrice atomic.Value // Thread-safe price storage
+}
+
+func (m *PriceMonitor) Start(ctx context.Context) error {
+    ticker := time.NewTicker(15 * time.Second)
+    defer ticker.Stop()
+
+    for {
+        select {
+        case <-ctx.Done():
+            return ctx.Err()
+        case <-m.stopChan:
+            return nil
+        case <-ticker.C:
+            price, err := m.client.GetCurrentPrice(ctx)
+            if err != nil {
+                log.Printf("Error al obtener precio: %v", err)
+                continue
+            }
+            m.currentPrice.Store(price)
+            
+            select {
+            case m.alertChan <- &Alert{Price: price}:
+            default:
+                // Non-blocking send to avoid goroutine leaks
+            }
+        }
+    }
+}
+```
+
+#### WebSocket Connection Handling
+```go
+// filename: internal/api/handlers/websocket.go
+
+type WebSocketHandler struct {
+    upgrader  websocket.Upgrader
+    monitor   PriceMonitor
+    clients   sync.Map // Thread-safe map for client connections
+}
+
+func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
+    // Upgrade HTTP connection to WebSocket
+    conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+    if err != nil {
+        log.Printf("Error al establecer conexión WebSocket: %v", err)
+        return
+    }
+    defer conn.Close()
+
+    // Register client
+    clientID := uuid.New().String()
+    h.clients.Store(clientID, conn)
+    defer h.clients.Delete(clientID)
+
+    // Handle client messages
+    go func() {
+        for {
+            messageType, _, err := conn.ReadMessage()
+            if err != nil {
+                if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+                    log.Printf("Error en WebSocket: %v", err)
+                }
+                return
+            }
+            if messageType == websocket.CloseMessage {
+                return
+            }
+        }
+    }()
+
+    // Send price updates
+    for {
+        select {
+        case <-c.Done():
+            return
+        default:
+            price := h.monitor.GetCurrentPrice()
+            err := conn.WriteJSON(map[string]interface{}{
+                "price": price,
+                "timestamp": time.Now(),
+            })
+            if err != nil {
+                log.Printf("Error al enviar precio por WebSocket: %v", err)
+                return
+            }
+            time.Sleep(15 * time.Second)
+        }
+    }
+}
+
+func (h *WebSocketHandler) BroadcastPrice(price float64) {
+    h.clients.Range(func(key, value interface{}) bool {
+        conn := value.(*websocket.Conn)
+        err := conn.WriteJSON(map[string]interface{}{
+            "price": price,
+            "timestamp": time.Now(),
+        })
+        if err != nil {
+            log.Printf("Error al enviar precio a cliente %s: %v", key, err)
+            h.clients.Delete(key)
+        }
+        return true
+    })
+}
+```
+
+### 4. Testing Best Practices:
+- Write **table-driven tests** for comprehensive coverage
+- Use **interfaces and mocks** for external dependencies
+- Test **error conditions** thoroughly
+- Use **subtests** for better organization
+
+#### Example Test:
+```go
+// filename: internal/alerts/alert_manager_test.go
+
+func TestAlertManager_CheckPrice(t *testing.T) {
+    tests := []struct {
+        name        string
+        price       float64
+        alerts      []*Alert
+        wantTriggered bool
+        wantErr    bool
+    }{
+        {
+            name:     "precio por encima del objetivo",
+            price:    45000,
+            alerts:   []*Alert{{Type: "above", TargetPrice: 44000}},
+            wantTriggered: true,
+        },
+        {
+            name:     "precio por debajo del objetivo",
+            price:    43000,
+            alerts:   []*Alert{{Type: "below", TargetPrice: 44000}},
+            wantTriggered: true,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            mockNotifier := &MockNotificationService{}
+            mockMonitor := &MockPriceMonitor{price: tt.price}
+            
+            manager := NewAlertManager(mockNotifier, mockMonitor)
+            err := manager.CheckPrice(context.Background())
+            
+            if (err != nil) != tt.wantErr {
+                t.Errorf("CheckPrice() error = %v, wantErr %v", err, tt.wantErr)
+            }
+            
+            if mockNotifier.notificationsSent != tt.wantTriggered {
+                t.Errorf("Expected notification sent: %v, got: %v", 
+                    tt.wantTriggered, mockNotifier.notificationsSent)
+            }
+        })
+    }
+}
+```
+
+### 5. Performance Guidelines:
+- Minimize **allocations** and avoid premature optimization
+- Use **buffered channels** appropriately for performance
+- Implement proper **connection pooling** for external services
+- Use **sync.Pool** for frequently allocated objects when necessary
+
+### 6. Key Conventions:
+1. Prioritize **readability and maintainability** over premature optimization
+2. Design for **change**: isolate business logic and minimize external dependencies
+3. Emphasize clear **boundaries** and **dependency inversion**
+4. Ensure all behavior is **observable, testable, and documented**

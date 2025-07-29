@@ -1,0 +1,149 @@
+# API Documentation Guidelines
+- Follow generals rules [generals.mdc](../generals.mdc)
+
+### 1. Minimum Documentation Requirements
+
+- All exported (public) functions, types, interfaces, and packages **must** have GoDoc comments.
+- All models and handlers must include GoDoc examples.
+- All documentation must be written in Spanish (except code and variable names).
+- Provide concise **READMEs** for each package.
+- Maintain a 'CONTRIBUTING.md' to guide team practices.
+- Keep README.md up to date.
+
+### 2. GoDoc Examples
+```go
+// PriceMonitor manages Bitcoin price monitoring and alert triggering.
+// Example usage:
+//   monitor := NewPriceMonitor(btcClient, alertService)
+//   err := monitor.Start(ctx)
+type PriceMonitor interface {
+    Start(ctx context.Context) error
+    Stop() error
+}
+```
+
+### 3. OpenAPI/Swagger Documentation Standards
+
+- **Main API Documentation** Example:
+```go
+// @title Bitcoin Price Alert API
+// @version 1.0
+// @description API para monitoreo y alertas de precios de Bitcoin
+// @host localhost:8080
+// @BasePath /api/v1
+func main() {
+    // ... implementation
+}
+```
+
+- **Handler Documentation** Example:
+```go
+// CreateAlert godoc
+// @Summary Crear una nueva alerta de precio
+// @Description Crea una nueva alerta para monitorear el precio de Bitcoin
+// @Tags alerts
+// @Accept json
+// @Produce json
+// @Param alert body CreateAlertRequest true "Información de la alerta"
+// @Success 201 {object} CreateAlertResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /alerts [post]
+func (h *AlertHandler) CreateAlert(c *gin.Context) {
+    // ... implementation
+}
+
+// WebSocket godoc
+// @Summary Conexión WebSocket para actualizaciones de precio
+// @Description Establece una conexión WebSocket para recibir actualizaciones de precio en tiempo real
+// @Tags price
+// @Accept json
+// @Produce json
+// @Success 101 {string} string "Switched to WebSocket protocol"
+// @Failure 400 {object} ErrorResponse
+// @Router /ws/price [get]
+func (h *PriceHandler) WebSocket(c *gin.Context) {
+    // ... implementation
+}
+```
+
+- **Model Documentation** Example:
+```go
+// Alert representa una alerta de precio de Bitcoin
+// @Description Configuración y estado de una alerta de precio
+type Alert struct {
+    // Identificador único de la alerta
+    // @Example "123e4567-e89b-12d3-a456-426614174000"
+    ID string `json:"id"`
+
+    // Nombre descriptivo de la alerta
+    // @Example "Alerta de caída 10%"
+    Name string `json:"name"`
+
+    // Precio objetivo que dispara la alerta
+    // @Example 45000.00
+    TargetPrice float64 `json:"target_price,omitempty"`
+
+    // Porcentaje de cambio que dispara la alerta
+    // @Example 10.5
+    Percentage float64 `json:"percentage,omitempty"`
+
+    // Indica si la alerta está activa
+    // @Example true
+    IsActive bool `json:"is_active"`
+}
+```
+
+- **Request/Response Documentation** Example:
+```go
+// CreateAlertRequest representa el cuerpo de la petición para crear una alerta
+// @Description Datos necesarios para crear una nueva alerta de precio
+type CreateAlertRequest struct {
+    // Nombre de la alerta
+    // @Example "Alerta de subida 5%"
+    Name string `json:"name" binding:"required"`
+
+    // Tipo de alerta (above, below, change)
+    // @Example "change"
+    Type string `json:"type" binding:"required"`
+
+    // Precio objetivo (para alertas above/below)
+    // @Example 50000
+    TargetPrice float64 `json:"target_price,omitempty"`
+
+    // Porcentaje de cambio (para alertas change)
+    // @Example 5.0
+    Percentage float64 `json:"percentage,omitempty"`
+}
+```
+
+- **Error Response Documentation** Example:
+```go
+// ErrorResponse representa la estructura estándar de errores
+// @Description Estructura de respuesta para errores de la API
+type ErrorResponse struct {
+    // Código de error
+    // @Example "INVALID_PRICE"
+    Code string `json:"code"`
+
+    // Mensaje descriptivo del error
+    // @Example "El precio objetivo debe ser mayor que cero"
+    Message string `json:"message"`
+
+    // Detalles adicionales del error (opcional)
+    // @Example {"field": "target_price", "error": "debe ser mayor que 0"}
+    Details interface{} `json:"details,omitempty"`
+}
+```
+
+### 4. Documentation Generation
+- Generate API documentation using `swag init` in the project root
+- Validate documentation using `swag fmt`
+- Keep documentation up to date with code changes
+
+### 5. Documentation Checklist for Code Review
+- [ ] All exported functions, types, and interfaces have GoDoc comments
+- [ ] All models and handlers have example sections
+- [ ] All error types are documented
+- [ ] README.md is up to date
+- [ ] OpenAPI/Swagger docs are generated and validated

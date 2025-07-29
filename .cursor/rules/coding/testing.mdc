@@ -1,0 +1,729 @@
+# Testing Rules - Complete Unit Testing Guide
+
+## Objective
+Ensure that unit tests are maintainable, provide protection against regressions, are resistant to refactoring, and provide fast feedback. Following Go community best practices and using the testify package.
+
+**MANDATORY** Follow this rules strictly, check every point carefull
+
+---
+
+## 1. General Principles
+
+### Fundamental Rules
+- **MANDATORY** Read and Apply general rules [generals.mdc](mdc:go/web-clean-arch/{{cookiecutter.repo_name}}/.{{cookiecutter.genai_ide}}/rules/generals.mdc)
+- **Every exported (public) method must have a corresponding test**
+- Use the **standard go testing package** for all tests  
+- **Always use testify asserts** `assert` to compare results and validate conditions
+- Use **Gherkin-style naming**: given/when/then, in kebab-case, descriptive and understandable by non-programmers
+- **MANDATORY** Avoid multiple given-then per test; each test should validate a single objective
+- Use **parallel execution** where possible
+- Ensure **test coverage for every exported function**
+- Consider previous unit tests in the codebase for consistency
+- Organize tests in functions that start with `Test` and accept `*testing.T` as argument
+- Use `suite` to group related tests and take advantage of `SetupSuite`, `SetupTest` and `TearDownTest`
+- **Write tests independent of each other**; do not depend on execution order
+- Implement `SetupSuite` for global initialization, `SetupTest` for clean state before each test, and `TearDownTest` for cleanup and mock assertions
+
+---
+
+## 2. Coverage Requirements
+
+### Mandatory Metrics
+- **Minimum coverage: 100%** per file under test
+- **Branch coverage: 100%** for all logical conditions
+- **Function coverage: 100%** for public and private methods
+
+### Observable Behavior Prioritization
+- **FIRST**: Write tests for observable behaviors and real use cases
+- **SECOND**: Complete coverage for code not covered by use cases
+- **NEVER**: Write artificial tests just to increase coverage
+
+### Tools
+- Use `go test -cover` to ensure coverage
+- Review and update tests when refactoring or adding new features
+
+---
+
+## 3. File Structure and Organization
+
+### File Conventions
+- **Test files**: Place test files next to the file under test, with `_test.go` suffix
+
+### Structure Example
+```
+/internal/core/usecase/account/create/create_account_usecase.go
+/internal/core/usecase/account/create/create_account_usecase_test.go
+/internal/core/usecase/account/create/mocks/account_repository.go
+```
+
+### Mocking Rules
+- **Only domain aggregates and value objects** may be used directly as dependencies
+- **All other dependencies must be mocked**
+- **Mocks**: Place in `mocks` subfolder next to the file under test
+- **Mock naming**: Use the name of the mocked class, e.g. `kvs_provider.go`
+- Use **mockery** or hand-written mocks as appropriate
+- **MANDATORY** Never use `mock.Anything`, evaluate objects and concrete values whenever be possible or use  `mock.MatchedBy` instead.
+
+### Test File Organization
+- **Suite definition** - Define the test suite struct with all necessary fields
+- **Setup/Teardown methods** - SetupSuite, SetupTest, TearDownTest in that order
+- **Helper methods** - Group by category: Given helpers, And helpers, When helpers, Then helpers
+- **Test methods** - All test cases within the suite, organized by feature/scenario
+- **Suite execution** - MUST be the last function in the file
+  ```go
+  // ALWAYS at the end of the file
+  func TestComponentSuite(t *testing.T) {
+      suite.Run(t, new(ComponentSuite))
+  }
+  ```
+- **No standalone test functions** - All tests should be part of a suite for consistency
+
+---
+
+## 4. Base Setup - Suite Pattern
+
+```go
+type ComponentSuite struct {
+    suite.Suite
+    // Add component-specific fields and mocks
+}
+
+func (s *ComponentSuite) SetupSuite() {
+    // Global config (runs once)
+}
+
+func (s *ComponentSuite) SetupTest() {
+    // Clean state per test
+}
+
+func (s *ComponentSuite) TearDownTest() {
+    // Assert all mock expectations after each test
+    // This eliminates the need to call AssertExpectations in every test
+}
+
+func TestComponentSuite(t *testing.T) {
+    suite.Run(t, new(ComponentSuite))
+}
+```
+
+---
+
+## 5. Implementation Patterns by Component
+
+### R1: Domain Entity Test (Sociable)
+**When:** Testing aggregates/value objects  
+**Key:** No mocks for domain objects, focus on business rules
+
+#### Example with Suite Pattern
+```go
+type EntitySuite struct {
+    suite.Suite
+    entity *domain.Entity
+    result error
+}
+
+func (s *EntitySuite) SetupTest() {
+    s.entity = nil
+    s.result = nil
+}
+
+func (s *EntitySuite) givenEntityWithState(state Status) {
+    s.entity = domain.NewEntity("id", state)
+}
+
+func (s *EntitySuite) whenIChangeStateTo(newState Status) {
+    s.result = s.entity.ChangeState(newState)
+}
+
+func (s *EntitySuite) thenStateChanges() {
+    s.NoError(s.result)
+}
+
+func (s *EntitySuite) thenStateChangeFailsWith(msg string) {
+    s.Error(s.result)
+    s.Contains(s.result.Error(), msg)
+}
+
+func (s *EntitySuite) TestWhenValidTransition_ThenStateChanges() {
+    s.givenEntityWithState(ACTIVE)
+    s.whenIChangeStateTo(SUSPENDED)
+    s.thenStateChanges()
+}
+```
+
+---
+
+### R2: Use Case Test (Solitary)
+**When:** Testing business logic with dependencies  
+**Key:** Mock ALL dependencies, verify all calls
+
+#### Example with Suite Pattern
+```go
+type UseCaseSuite struct {
+    suite.Suite
+    useCase UseCase
+    repoMock *mocks.RepositoryMock
+    pubMock *mocks.PublisherMock
+    command Command
+    result *Result
+    err error
+}
+
+func (s *UseCaseSuite) SetupTest() {
+    s.repoMock = new(mocks.RepositoryMock)
+    s.pubMock = new(mocks.PublisherMock)
+    s.useCase = NewUseCase(s.repoMock, s.pubMock)
+    s.result = nil
+    s.err = nil
+}
+
+func (s *UseCaseSuite) TearDownTest() {
+    s.repoMock.AssertExpectations(s.T())
+    s.pubMock.AssertExpectations(s.T())
+}
+
+func (s *UseCaseSuite) givenValidCommand() {
+    s.command = Command{ID: "123", Data: "valid"}
+}
+
+func (s *UseCaseSuite) andRepoSucceeds() {
+    s.repoMock.On("Save", mock.Anything, mock.Anything).Return(nil)
+}
+
+func (s *UseCaseSuite) andPublisherSucceeds() {
+    s.pubMock.On("Publish", mock.Anything, mock.Anything).Return(nil)
+}
+
+func (s *UseCaseSuite) whenIExecute() {
+    s.result, s.err = s.useCase.Execute(context.Background(), s.command)
+}
+
+func (s *UseCaseSuite) thenExecutionSucceeds() {
+    s.NoError(s.err)
+    s.NotNil(s.result)
+}
+
+func (s *UseCaseSuite) TestWhenValidCommand_ThenExecutes() {
+    s.givenValidCommand()
+    s.andRepoSucceeds()
+    s.andPublisherSucceeds()
+    s.whenIExecute()
+    s.thenExecutionSucceeds()
+}
+```
+---
+
+### R3: Repository Test (Mock External)
+**When:** Testing data adapters  
+**Key:** Mock external clients, test mapping logic
+
+```go
+type RepositorySuite struct {
+    suite.Suite
+    repo Repository
+    clientMock *mocks.KVSClientMock
+    mapperMock *mocks.MapperMock
+    entity *domain.Entity
+    err error
+}
+
+func (s *RepositorySuite) SetupTest() {
+    s.clientMock = new(mocks.KVSClientMock)
+    s.mapperMock = new(mocks.MapperMock)
+    s.repo = NewRepository(s.clientMock, s.mapperMock)
+    s.err = nil
+}
+
+func (s *RepositorySuite) TearDownTest() {
+    s.clientMock.AssertExpectations(s.T())
+    s.mapperMock.AssertExpectations(s.T())
+}
+
+func (s *RepositorySuite) givenEntityToSave() {
+    s.entity = &domain.Entity{ID: "123"}
+}
+
+func (s *RepositorySuite) andMapperConverts() {
+    s.mapperMock.On("ToKVS", s.entity).Return(kvs.Item{Key: "key", Value: "value"}, nil)
+}
+
+func (s *RepositorySuite) andClientSaves() {
+    s.clientMock.On("Put", mock.Anything, mock.Anything).Return(nil)
+}
+
+func (s *RepositorySuite) whenISave() {
+    s.err = s.repo.Save(context.Background(), s.entity)
+}
+
+func (s *RepositorySuite) thenSaveSucceeds() {
+    s.NoError(s.err)
+}
+
+func (s *RepositorySuite) TestWhenSave_ThenCallsClient() {
+    s.givenEntityToSave()
+    s.andMapperConverts()
+    s.andClientSaves()
+    s.whenISave()
+    s.thenSaveSucceeds()
+}
+```
+
+---
+
+### R4: Handler Test (Mock UseCase)
+**When:** Testing HTTP handlers  
+**Key:** Mock use cases and mappers, test HTTP specifics
+
+```go
+type HandlerSuite struct {
+    suite.Suite
+    handler Handler
+    useCaseMock *mocks.UseCaseMock
+    mapperMock *mocks.MapperMock
+    recorder *httptest.ResponseRecorder
+    request *http.Request
+}
+
+func (s *HandlerSuite) SetupTest() {
+    s.useCaseMock = new(mocks.UseCaseMock)
+    s.mapperMock = new(mocks.MapperMock)
+    s.handler = NewHandler(s.useCaseMock, s.mapperMock)
+    s.recorder = httptest.NewRecorder()
+}
+
+func (s *HandlerSuite) TearDownTest() {
+    s.useCaseMock.AssertExpectations(s.T())
+    s.mapperMock.AssertExpectations(s.T())
+}
+
+func (s *HandlerSuite) givenValidRequest() {
+    body := `{"data": "valid"}`
+    s.request = httptest.NewRequest("POST", "/api", strings.NewReader(body))
+    s.request.Header.Set("Content-Type", "application/json")
+}
+
+func (s *HandlerSuite) andMapperSucceeds() {
+    s.mapperMock.On("ToCommand", mock.Anything).Return(Command{}, nil)
+    s.mapperMock.On("ToResponse", mock.Anything).Return(Response{})
+}
+
+func (s *HandlerSuite) andUseCaseSucceeds() {
+    s.useCaseMock.On("Execute", mock.Anything, mock.Anything).Return(&Result{}, nil)
+}
+
+func (s *HandlerSuite) whenIHandle() {
+    err := s.handler.Handle(s.recorder, s.request)
+    s.NoError(err)
+}
+
+func (s *HandlerSuite) thenStatusIs(code int) {
+    s.Equal(code, s.recorder.Code)
+}
+
+func (s *HandlerSuite) TestWhenValidRequest_ThenSuccess() {
+    s.givenValidRequest()
+    s.andMapperSucceeds()
+    s.andUseCaseSucceeds()
+    s.whenIHandle()
+    s.thenStatusIs(http.StatusOK)
+}
+```
+
+---
+
+### R5: Mapper Test (Direct)
+**When:** Testing data transformations  
+**Key:** No mocks, direct input/output validation
+
+```go
+type MapperSuite struct {
+    suite.Suite
+    mapper Mapper
+    input *domain.Entity
+    output dto.Response
+    err error
+}
+
+func (s *MapperSuite) SetupTest() {
+    s.mapper = NewMapper()
+    s.err = nil
+}
+
+func (s *MapperSuite) givenValidEntity() {
+    s.input = &domain.Entity{
+        ID: "123",
+        Name: "test",
+        Status: ACTIVE,
+    }
+}
+
+func (s *MapperSuite) whenIMapToDTO() {
+    s.output, s.err = s.mapper.ToDTO(s.input)
+}
+
+func (s *MapperSuite) thenMappingSucceeds() {
+    s.NoError(s.err)
+}
+
+func (s *MapperSuite) thenOutputHasField(field, value string) {
+    switch field {
+    case "id":
+        s.Equal(value, s.output.ID)
+    case "name":
+        s.Equal(value, s.output.Name)
+    }
+}
+
+func (s *MapperSuite) TestWhenValidEntity_ThenMapsCorrectly() {
+    s.givenValidEntity()
+    s.whenIMapToDTO()
+    s.thenMappingSucceeds()
+    s.thenOutputHasField("id", "123")
+    s.thenOutputHasField("name", "test")
+}
+```
+
+### Rules for Mappers
+- **Solitary tests**: test mapping logic directly, no mocks needed unless mapping depends on external services
+- Place tests next to the mapper implementation
+
+---
+
+### R6: Error Handling Pattern
+**When:** Testing error scenarios  
+**Key:** Specific error assertions, maintain readability
+
+```go
+func (s *Suite) andOperationFails() {
+    s.mockDep.On("Method", mock.Anything).Return(nil, errors.New("operation failed"))
+}
+
+func (s *Suite) thenErrorContains(msg string) {
+    s.Error(s.err)
+    s.Contains(s.err.Error(), msg)
+}
+
+func (s *Suite) thenErrorIs(expectedErr error) {
+    s.Error(s.err)
+    s.ErrorIs(s.err, expectedErr)
+}
+
+func (s *Suite) TestWhenDependencyFails_ThenReturnsError() {
+    s.givenValidInput()
+    s.andOperationFails()
+    s.whenIExecute()
+    s.thenErrorContains("operation failed")
+}
+```
+
+---
+
+## 6. DTOs/Contracts
+
+### Rules for DTOs
+- **No tests required** unless they contain validation or custom logic
+- If they contain logic, test as value objects
+
+---
+
+## 7. Quick Reference
+
+| Component | Test Type | Mock Strategy |
+|-----------|-----------|---------------|
+| **Entity** | Sociable | No domain mocks |
+| **UseCase** | Solitary | Mock all deps |
+| **Repository** | Solitary | Mock external clients |
+| **Handler** | Integration | Mock use cases |
+| **Mapper** | Direct | No mocks |
+
+---
+
+## 8. Given/And/When/Then Structure
+
+### Organized Test Flow
+La estructura de cada test debe seguir este orden específico:
+
+1. **Given** - Establece el estado inicial (solo uno por test)
+2. **And** - Agrega precondiciones adicionales (múltiples permitidos)
+3. **When** - Ejecuta la acción bajo prueba (solo uno por test)
+4. **Then** - Verifica el resultado esperado (múltiples permitidos)
+
+### Structure Rules
+- **Given**: Solo al inicio, establece el contexto principal
+- **And**: Para precondiciones adicionales, evita repetir "given"
+- **When**: Único por test, debe ser la acción principal que se está probando
+- **Then**: Para verificar resultados, generalmente lo retornado por el método bajo prueba
+
+### Correct Test Structure Example
+```go
+func (s *UseCaseSuite) TestWhenValidCommand_ThenAccountIsCreated() {
+    s.givenValidCommand()
+    s.andRepositorySucceeds()
+    s.andPublisherSucceeds()
+    s.andIDGeneratorSucceeds()
+    s.whenIExecuteCommand()
+    s.thenResultContainsAccountID()
+}
+```
+
+### Incorrect Structure Examples
+```go
+// ❌ BAD: Multiple Given statements
+func (s *UseCaseSuite) TestBadStructure() {
+    s.givenValidCommand()
+    s.givenRepositorySucceeds()  // Should be andRepositorySucceeds()
+    s.givenPublisherSucceeds()   // Should be andPublisherSucceeds()
+    s.whenIExecuteCommand()
+    s.thenExecutionSucceeds()
+}
+
+// ❌ BAD: Multiple When statements
+func (s *UseCaseSuite) TestBadStructure() {
+    s.givenValidCommand()
+    s.whenIExecuteCommand()      // First action
+    s.whenIValidateResult()      // Should be thenResultIsValid()
+}
+```
+
+---
+
+## 9. Naming Conventions
+
+### For Suites
+- Suite: `{Component}Suite`
+- Test: `TestWhen{Condition}_Then{Outcome}`
+- Given: `given{StateOrCondition}`
+- And: `and{AdditionalCondition}`
+- When: `whenI{Action}`  
+- Then: `then{ExpectedResult}`
+
+---
+
+## 9. Tools and Commands
+
+### Mock Generation
+- Use **mockery** to generate mocks automatically
+- Alternatively, write mocks by hand when appropriate
+
+### Coverage
+- Execute `go test -cover` to verify coverage
+- Maintain 100% coverage per file
+
+### Execution
+- Use `go test -v` for detailed output
+- Use `go test -parallel` for parallel execution when possible
+
+---
+
+## 10. Complete Implementation Examples
+
+### Complete Case: Account UseCase with both patterns
+
+#### Suite Pattern
+```go
+type CreateAccountUseCaseSuite struct {
+    suite.Suite
+    useCase *CreateAccountUseCase
+    repoMock *mocks.AccountRepositoryMock
+    pubMock *mocks.EventPublisherMock
+    genMock *mocks.IDGeneratorMock
+    command CreateAccountCommand
+    result *CreateAccountResult
+    err error
+}
+
+func (s *CreateAccountUseCaseSuite) SetupTest() {
+    s.repoMock = new(mocks.AccountRepositoryMock)
+    s.pubMock = new(mocks.EventPublisherMock)
+    s.genMock = new(mocks.IDGeneratorMock)
+    s.useCase = NewCreateAccountUseCase(s.repoMock, s.pubMock, s.genMock)
+    s.result = nil
+    s.err = nil
+}
+
+func (s *CreateAccountUseCaseSuite) TearDownTest() {
+    s.genMock.AssertExpectations(s.T())
+    s.repoMock.AssertExpectations(s.T())
+    s.pubMock.AssertExpectations(s.T())
+}
+
+func (s *CreateAccountUseCaseSuite) givenValidCommand() {
+    s.command = CreateAccountCommand{
+        UserID: "user-123",
+        Type:   CHECKING,
+    }
+}
+
+func (s *CreateAccountUseCaseSuite) andIDGeneratorSucceeds() {
+    s.genMock.On("Generate").Return("acc-123")
+}
+
+func (s *CreateAccountUseCaseSuite) andRepositorySucceeds() {
+    s.repoMock.On("Save", mock.Anything, mock.MatchedBy(func(acc *account.Account) bool {
+        return acc.UserID == "user-123" && acc.Type == CHECKING
+    })).Return(nil)
+}
+
+func (s *CreateAccountUseCaseSuite) andPublisherSucceeds() {
+    s.pubMock.On("Publish", mock.Anything, mock.MatchedBy(func(event *events.AccountCreated) bool {
+        return event.AccountID == "acc-123"
+    })).Return(nil)
+}
+
+func (s *CreateAccountUseCaseSuite) whenIExecuteCommand() {
+    s.result, s.err = s.useCase.Execute(context.Background(), s.command)
+}
+
+func (s *CreateAccountUseCaseSuite) thenAccountIsCreatedSuccessfully() {
+    s.NoError(s.err)
+    s.NotNil(s.result)
+    s.Equal("acc-123", s.result.AccountID)
+}
+
+func (s *CreateAccountUseCaseSuite) TestWhenValidCommand_ThenAccountIsCreated() {
+    s.givenValidCommand()
+    s.andIDGeneratorSucceeds()
+    s.andRepositorySucceeds()
+    s.andPublisherSucceeds()
+    s.whenIExecuteCommand()
+    s.thenAccountIsCreatedSuccessfully()
+}
+
+func TestCreateAccountUseCaseSuite(t *testing.T) {
+    suite.Run(t, new(CreateAccountUseCaseSuite))
+}
+```
+
+---
+
+## 11. Common Anti-Patterns and Lessons Learned
+
+### 🚫 Anti-Pattern: Testing Internal Implementation Details
+
+**❌ NEVER DO THIS:**
+```go
+// BAD: Testing internal anonymous functions/closures
+s.cutHeaderServiceMock.On("CutHeader", s.ctx, mock.MatchedBy(func(header entity.ConsolidateHeader) bool {
+    return header.ID() == s.command.HeaderID() && header.TotalRecords() == totalRecords
+}), mock.MatchedBy(func(condition func(entity.ConsolidateHeader) bool) bool {
+    // Testing the condition function internals - WRONG!
+    testHeader := entity.NewConsolidateHeader(s.command.HeaderID(), totalRecords, 0)
+    return !condition(testHeader) // Testing implementation, not behavior
+})).Return(nil)
+```
+
+**❌ Problems with this approach:**
+- **Complex logic in tests**: Hard to understand and maintain
+- **Violates Given/When/Then**: Logic is mixed and confusing
+- **Tests implementation, not behavior**: Brittle to refactoring
+- **Recreates dependencies in tests**: Breaks Suite pattern structure
+
+**✅ DO THIS INSTEAD:**
+```go
+// GOOD: Test observable behavior, not internal implementation
+func (s *UseCaseSuite) TestWhenRepositoryReturnsLowCount_ThenCutHeaderIsCalledWithCorrectHeader() {
+    totalRecords := 50
+    s.givenValidMovementCreatedCommand()
+    s.givenRepositoryReturnsCount(totalRecords)
+    s.givenCutHeaderServiceSucceedsWithSpecificHeader(totalRecords)
+    s.whenIExecuteCommand()
+    s.thenExecutionSucceeds()
+}
+```
+
+### ✅ Best Practice: Focus on Observable Behavior
+
+**Key Principles:**
+1. **Test WHAT the code does, not HOW it does it**
+2. **Focus on inputs and outputs, not internal mechanics**
+3. **Keep tests declarative and readable**
+4. **Encapsulate complexity in helper methods when needed for coverage**
+
+### 🔧 Handling Coverage vs Simplicity Conflicts
+
+**When coverage requirements conflict with test simplicity:**
+
+```go
+// ✅ ACCEPTABLE: Encapsulate technical complexity in helpers
+func (s *UseCaseSuite) givenCutHeaderServiceSucceedsWithSpecificHeader(expectedTotalRecords int) {
+    s.cutHeaderServiceMock.On("CutHeader", s.ctx, mock.MatchedBy(func(header entity.ConsolidateHeader) bool {
+        return header.ID() == s.command.HeaderID() && header.TotalRecords() == expectedTotalRecords
+    }), mock.MatchedBy(func(condition func(entity.ConsolidateHeader) bool) bool {
+        // Technical necessity for coverage - encapsulated in helper
+        testHeader := entity.NewConsolidateHeader(s.command.HeaderID(), expectedTotalRecords, 0)
+        _ = condition(testHeader) // Execute condition to ensure coverage
+        return true
+    })).Return(nil)
+}
+```
+
+**Rules for this approach:**
+- **Technical complexity stays in helpers** - main test methods remain clean
+- **Main tests focus on business scenarios** - readable and maintainable
+- **Coverage achieved without compromising test clarity**
+
+### 🎯 Declarative Test Naming and Structure
+
+**❌ BAD - Technical/Implementation Focus:**
+- `TestWhenTotalRecordsIsLessThanCutThreshold_ThenConditionReturnsFalse`
+- `TestWhenTotalRecordsIsGreaterThanOrEqualToCutThreshold_ThenConditionReturnsTrue`
+
+**✅ GOOD - Business/Behavior Focus:**
+- `TestWhenRepositoryReturnsLowCount_ThenCutHeaderIsCalledWithCorrectHeader`
+- `TestWhenRepositoryReturnsHighCount_ThenCutHeaderIsCalledWithCorrectHeader`
+
+### 📋 Testing Checklist
+
+Before submitting tests, verify:
+
+- [ ] **Observable Behavior**: Am I testing what the code does, not how?
+- [ ] **Given/When/Then**: Is the test structure clear and declarative?
+- [ ] **No Internal Logic**: Am I avoiding testing private implementation details?
+- [ ] **Helper Encapsulation**: Is technical complexity hidden in helper methods?
+- [ ] **Business Language**: Do test names reflect business scenarios?
+- [ ] **Maintainable**: Will this test survive refactoring of internal implementation?
+- [ ] **File Organization**: Is the test suite execution function at the end of the file?
+
+### 🚫 Anti-Pattern: Empty or Redundant Helper Methods
+
+**❌ NEVER DO THIS:**
+```go
+// BAD: Helper methods without logic or purpose
+func (s *UseCaseSuite) thenNoRepositoryCallIsMade() {
+    // No hay expectativas en el repositorio para eventos inválidos
+}
+
+func (s *UseCaseSuite) thenNoCutHeaderCallIsMade() {
+    // No hay expectativas en el servicio para eventos inválidos
+}
+```
+
+### 🎯 Helper Method Quality Rules
+
+**Every helper method MUST:**
+1. **Have a clear, specific purpose** - not just exist for structure
+2. **Contain meaningful logic** - assertions, setup, or validations
+3. **Add value to test readability** - not just empty placeholders
+4. **Follow single responsibility** - one clear action per helper
+
+**❌ RED FLAGS for helper methods:**
+- Empty methods with only comments
+- Methods that just call other methods with no added value
+- "Placeholder" methods for future implementation
+- Methods that duplicate framework functionality
+
+### 🏆 Golden Rule
+
+> **"Test behavior, not implementation. When coverage forces complexity, encapsulate it in helpers to keep the main tests clean and declarative. Every helper method must have a purpose and meaningful logic."**
+
+---
+
+## 12. Summary and Quick Wins
+
+- **Start with observable behaviors** - focus on use cases first
+- **Use declarative naming** - business scenarios, not technical details  
+- **Encapsulate complexity** - keep main tests clean and readable
+- **Follow Given/When/Then** - maintain clear test structure
+- **Mock only external dependencies** - avoid testing internal mechanics
+- **100% coverage through discipline** - not artificial complexity
+```

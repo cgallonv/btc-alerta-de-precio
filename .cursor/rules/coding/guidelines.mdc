@@ -1,0 +1,30 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Guidelines references
+- Read and follow every linked file
+- Inform if you cannot read it because exceeds your context window
+
+## Golang Standards
+- Follow standards explained here: [go.mdc](mdc:.cursor/rules/go.mdc)
+
+## Architecture Standards
+- Follow rules explained here: [architecture.mdc](mdc:.cursor/rules/architecture.mdc)
+
+## Rules explaining project structure guidelines
+Rules that will guide you how to create files according to its responsability inside the application
+- Follow rules explained here: [project-structure.mdc](mdc:.cursor/rules/project-structure.mdc)
+
+## Rules for testing
+- Follow rules explained here: [testing.mdc](mdc:.cursor/rules/testing.mdc)
+
+## Rules about security
+- Follow rules explained here: [security.mdc](mdc:.cursor/rules/security.mdc)
+
+## Rules about how to document
+- Follow rules explained here: [documentation.mdc](mdc:.cursor/rules/documentation.mdc)
+
+## Rules for change management (ADR, GIT)
+- Follow rules explained here: [change-mgmt.mdc](mdc:.cursor/rules/change-mgmt.mdc)

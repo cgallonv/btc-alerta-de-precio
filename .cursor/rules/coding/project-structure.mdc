@@ -1,0 +1,631 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Project Structure Guidelines:
+- Follow generals rules [generals.mdc](mdc:go/web-clean-arch/{{cookiecutter.repo_name}}/.{{cookiecutter.genai_ide}}/rules/generals.mdc)
+
+### 1. General Rules
+- Follow this **project layout** explained at [architecture.mdc](mdc:.cursor/rules/architecture.mdc)
+- Group code by feature when it improves clarity and cohesion.
+- Create if not exists always one provider when you need to integrate external sources (kvs, bigqueue, stream, etc)
+- Implement only methods needed for complete the task
+
+#### Detailed **overall structure** Example:
+/cmd
+  /api
+    main.go
+/internal
+  /app
+    /config                       # app configuration
+    application.go                # app context
+  /core
+    /domain
+      /[X]                      # folder per entity (e.g., "payment") 
+    /error                      # file per business error (e.g., "duplicated_payment.go")  
+    /service
+      /[X]                      # folder per entity associated with the service           
+    /usecase
+      /[X]                      # folder per use case withing entity X (e.g., "create", "retry")
+/infrastructure
+  /entrypoints                    # Includes infrastructure components using the core layer, e.g. REST
+    /handler
+      /[X]                        # folder per entity and withing by resource
+  /adapters                       # Includes infrastructuree components that are used by the core layer, e.g. repositories, providers, etc.
+    /repositories                 # Includes infrastructure components handling persistence of data.            
+    /providers                    # Includes infrastructure components handling API calls (REST, SOAP, etc). 
+    /locks                        # Includes infrastructure components alowing to block and unblock resources.
+    /publishers                   # Includes infrastructure components alowing to publish messages in messages queues.
+    /metrics                      # Includes infrastructure components alowing to registre metrics. 
+
+
+### Rules for domain entities
+
+#### 1.  **Generals**
+- Must contain domain business logic related to the entity
+- You can include factories if applicable
+
+#### 2. **domain structure**
+```
+  /internal/core/domain
+    /statement
+      statement.go
+      statement_factories.go //OPTIONAL
+```
+
+#### 3. **domain sample**
+```go
+type Statement struct {
+	statementID          string                          `json:"statement_id"`
+	currency             string                          `json:"currency"`
+	amount               float64                         `json:"amount"`
+}
+
+func NewStatement(id string, currency string, amount float64) Statement {
+	return Statement{
+		statementID: id,
+		currency:    currency,
+		amount:      amount
+	}
+}
+
+func (e *Statement) Amount() string {
+	return e.amount
+}
+
+func (e *Statement) SetAmount(amount float64) {
+	e.amount = amount
+}
+
+//Other getters & setters
+```
+
+### Rules for usecases
+
+Usecase implement business logic, communicate with infrastructure layer using interfaces. Every thing defined inside a usecase is expressed in terms of business domain.
+
+#### 1. **Generals**
+  - Put any string variable in const at the start of the file
+  - Apply dependency injection when possible declaring interface within same use case file at the top
+  - Usecase must have only one public method called Execute and could have multiple private helper methods
+  - Don't use infrastructure implementations directly
+
+#### 2. **usecase structure**
+```
+  /internal/core/usecase
+    /account
+      /create          # action
+        create_account_usecase.go
+        create_account_command.go
+```
+
+#### 3. **usecase sample**
+```go
+const (
+	//PUT HERE VARIABLES
+)
+
+type Repository interface {
+
+}
+
+type UseCase struct {
+	repository Repository
+	//PUT OTHER RELATIONS HERE
+}
+
+func NewUseCase(repository Repository) UseCase {
+	return UseCase{repository: repository}
+}
+
+// USECASE METHODS GOES HERE
+```
+
+### Rules for domain services
+Encapsulate business logic that can be reused in several usecases
+
+#### 1.  **Generals**
+- Apply same rules as usecases
+- Must contain reusable business logic
+- Must be prefixed with _service
+
+#### 2. **domain service structure**
+```
+  /internal/core/service
+    /header
+      /mocks //OPTIONAL WHEN NEEDED
+      cut_header_service.go
+```
+
+#### 3. **domain service sample**
+```go
+const (
+	//PUT HERE VARIABLES
+)
+
+type Repository interface {
+
+}
+
+type CutHeaderService struct {
+	repository Repository
+	//PUT OTHER RELATIONS HERE
+}
+
+func NewCutHeaderService(repository Repository) CutHeaderService {
+	return CutHeaderService{repository: repository}
+}
+
+// DOMAIN SERVICE METHODS GOES HERE
+```
+
+### Rules for providers
+
+A provider is an implementation that abstract details from external sources, its meant to be reused for upper layers within infrastructure
+
+#### **Generals**
+  - Always create a Config struct with the parameters that the client need
+  - Try to name the instance method like New[name]Client()
+  - Write it clear and concise
+  - `Config` should be used only for client construction, so avoid include it in the provider struct unless strictly necessary
+  - It must be generic to be used on different specific adapters.
+
+#### **Structure**
+   ```
+   /internal/infrastructure/adapters
+     /provider
+       /kvs          # e.g.: kvs, bigq, streams, nosql
+         kvs_provider.go
+   ```
+
+#### **provider sample**
+```go
+type Config struct {
+	ContainerName      string
+	WriteTimeoutMillis int
+	ReadTimeoutMillis  int
+	MaxRetries         int
+	BackoffFunc        httpclient.BackoffFunc
+}
+
+type Client struct {
+	Database kvs.Client
+}
+
+func (c Config) NewKVSClient() Client {
+	kvsClientConfig := []kvs.OptionClient{
+		kvs.WithReadTimeout(time.Duration(c.ReadTimeoutMillis) * time.Millisecond),
+		kvs.WithWriteTimeout(time.Duration(c.WriteTimeoutMillis) * time.Millisecond),
+		kvs.WithReadRetries(c.MaxRetries, c.BackoffFunc),
+		kvs.WithWriteRetries(c.MaxRetries, c.BackoffFunc),
+	}
+
+	kvsClient, err := kvs.NewClient(c.ContainerName, kvsClientConfig...)
+	if err != nil {
+		log.Panicf("error config kvs: %s", err)
+	}
+	return Client{
+		Database: kvsClient,
+	}
+}
+
+//OPERATIONS GOES HERE
+func (c Client) Save(ctx context.Context, key string, value interface{}) error {
+	// PUT CODE HERE
+}
+
+func (c Client) Get(ctx context.Context, key string) (interface{}, error) {
+	// PUT CODE HERE
+}
+
+
+// ADD MORE OPERATIONS AS NEEDED...
+```
+
+### Rules for repositories and publishers
+
+Adapters are implementations that satisfies domain needs like data access, service communication, messaging publishing, etc. These follow an outgoing flow and use providers to resolve integration needs.
+
+#### 1. **Generals**
+  - Put any string variable in const at the start of the file
+  - Apply dependency injection when possible
+  - Use Data Transfer Objects DTO within the repository or publisher layer to represent data structures specific to the underlying data access technology avoiding expose this details to domain layer
+  - Use mapper when you need to cast from DTO to DOMAIN ENTITY
+  - Implement repository when need data access capabilities
+  - Implement publishers when need messaging or streaming capabilities
+
+#### 2. **Structure for repositories**
+   ```
+   /internal/infrastructure/adapters
+     /repositories
+       /kvs          # e.g.: kvs, nosql
+         /account
+           account_repository.go
+   ```
+
+   **Structure for publishers**
+   ```
+   /internal/infrastructure/adapters
+     /publishers
+       /bigq          # e.g.: bigq, streams
+         /account
+           account_publisher.go
+
+
+#### 3. **repository sample**
+```go
+const (
+	//PUT HERE VARIABLES
+)
+
+type ProviderNameClient interface {
+
+}
+
+type Mapper interface {
+	
+}
+
+type Repository struct {
+	client ProviderNameClient
+	mapper Mapper
+}
+
+func NewRepository(client ProviderNameClient, mapper Mapper) Repository {
+	return Repository{client: client, mapper: mapper}
+}
+
+// REPOSITORY METHODS GOES HERE
+```
+
+### Rules for usecases
+
+Usecase implement business logic, communicate with infrastructure layer using interfaces. Every thing defined inside a usecase is expressed in terms of business domain.
+
+#### 1. **Generals**
+  - Put any string variable in const at the start of the file
+  - Apply dependency injection when possible declaring interface within same use case file at the top
+  - Usecase must have only one public method called Execute and could have multiple private helper methods
+  - Don't use infrastructure implementations directly
+
+#### 2. **usecase structure**
+```
+  /internal/core/usecase
+    /account
+      /create          # action
+        create_account_usecase.go
+        create_account_command.go
+```
+
+#### 3. **usecase sample**
+```go
+const (
+	//PUT HERE VARIABLES
+)
+
+type Repository interface {
+
+}
+
+type UseCase struct {
+	repository Repository
+	//PUT OTHER RELATIONS HERE
+}
+
+func NewUseCase(repository Repository) UseCase {
+	return UseCase{repository: repository}
+}
+
+// USECASE METHODS GOES HERE
+```
+
+### Rules for Handlers
+
+Handlers are components that handle HTTP requests and act as entry points to the application.
+
+#### 1. **Generals**
+  - Must apply dependency injection for any external implementation
+  - Must set strings in a const at the start of the file
+  - Must use net/http package for Handle method
+  - Implement a handler when need to create a new REST endpoint
+  - Implement a handler when need to create a fury bigqueue consumer
+  - Implement a handler when need to create a fury stream sink
+  - Implement a handler when need to create a fury job
+
+#### 2. **Structure and Location**
+   ```
+   /internal/infrastructure/entrypoints/handler
+     /{resource}          # e.g.: account
+       /{action}          # e.g.: create, update, get, delete, list
+         /contracts       # Input/Output DTOs
+           request.go
+           response.go
+         /mapper          # Mappers between DTOs and domain entities
+           mapper.go
+         /mocks          # Mocks for unit testing
+           mapper_mock.go
+           usecase_mock.go
+         handler.go      # handler implementation
+   ```
+
+#### 3. **Naming Conventions**
+   - Each handler must be in its own package named after the action
+   - Contracts must be in the `contracts` package
+   - Mappers must be in the `mapper` package
+   - Mocks must be in the `mocks` package
+   - The main file must be named `handler.go`
+   - The main structure must be named `Handler`
+   - Must have a single public method named `Handle`
+
+#### 4. **Contracts (DTOs)**
+   - Must reside in the `contracts` package
+   - Must be specific to each action
+   - Must use json tags for serialization
+   - Must not expose domain details
+   - Can include custom validations using  `github.com/go-playground/validator`
+   - Example:
+   ```go
+   package contracts
+
+   type UserRequest struct {
+	Name     string `json:"name" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Age      int    `json:"age,omitempty" validate:"gte=0,lte=130"`
+	IsActive bool   `json:"isActive" validate:"required"`
+   }
+
+   type SomeResponse struct {
+       // response fields
+   }
+   ```
+
+#### 5. **Mappers**
+   - Must reside in the `mapper` package
+   - Must implement an interface
+   - Must handle conversion between DTOs and domain entities
+   - Must be injected into the handler
+   ```go
+   package mapper
+
+   type Mapper interface {
+       ToCommand(req contracts.SomeRequest) domain.Command
+       ToResponse(entity domain.Entity) contracts.SomeResponse
+   }
+   ```
+
+#### 6. **Mocks**
+   - Must reside in the `mocks` package
+   - Preferably generated with tools like mockery
+   - Must include mocks for all interfaces used by the handler
+   - Must be used exclusively for testing
+
+#### 7. **Handler Implementation**
+   ```go
+   package action
+
+   const (
+    // Constants here
+   )
+
+   type UseCase interface {
+      // Method signatures
+   }
+
+   type Mapper interface {
+     // Method signatures
+   }
+
+   type Handler struct {
+       useCase SomeUseCase
+       mapper  mapper.Mapper
+   }
+
+   func NewHandler(useCase SomeUseCase, mapper mapper.Mapper) *Handler {
+       return &Handler{
+           useCase: useCase,
+           mapper:  mapper,
+       }
+   }
+
+   func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
+       // Implementation
+   }
+   ```
+
+#### 8. **Responsibilities**
+   - A handler must handle a single action
+   - Must implement Swagger documentation according to [documentation.mdc](mdc:.cursor/rules/documentation.mdc)
+   - Must delegate data mapping to the mapper
+   - Must use fury_go-platform helpers
+   - Must handle errors appropriately
+
+#### 9. **Testing**
+   - Each handler must have unit tests following guidelines in [testing.mdc](mdc:.cursor/rules/testing.mdc)
+   - Must use mocks defined in the `mocks` package
+
+## Rules for Endpoints Configuration and Handlers Container
+
+Configurations to expose endpoints for consume by external systems
+
+1. **Handlers Container Structure**
+   - Must be organized hierarchically by resource and its handlers
+   - Each resource must have its own handlers structure
+   - Names must be descriptive and follow naming convention
+
+   ```go
+   type HandlersContainer struct {
+       ResourceName ResourceHandlers
+   }
+
+   type ResourceHandlers struct {
+       Create  *create.Handler
+       Get     *get.Handler
+       Update  *update.Handler
+       Delete  *delete.Handler
+       List    *list.Handler
+   }
+   ```
+
+2. **Handlers Container Constructor**
+   - Must receive all handlers as parameters
+   - Must group handlers by resource
+   - Must follow dependency injection principle
+
+   ```go
+   func NewHandlersContainer(
+       resourceCreate *create.Handler,
+       resourceGet *get.Handler,
+       // ... other handlers
+   ) *HandlersContainer {
+       return &HandlersContainer{
+           ResourceName: ResourceHandlers{
+               Create: resourceCreate,
+               Get:    resourceGet,
+               // ... other handlers
+           },
+       }
+   }
+   ```
+
+3. **Routes Configuration**
+   - Use fury_go-platform router
+   - Group routes by resource
+   - Follow RESTful conventions
+   - Use clear and descriptive names
+   - Maintain resource hierarchy in URLs
+
+   ```go
+   func registerEndpoints(app *fury.Application, hc *HandlersContainer) {
+       // Url mapping for REST endpoints
+       apiGroup := app.Router.Group("/{version}/sites/{site_id}")
+       {
+           // Resource subgroup
+           resourceGroup := apiGroup.Group("/resource-name")
+           {
+               resourceGroup.Post("", hc.ResourceName.Create.Handle)
+               resourceGroup.Get("", hc.ResourceName.List.Handle)
+               resourceGroup.Get("/{id}", hc.ResourceName.Get.Handle)
+               resourceGroup.Put("/{id}", hc.ResourceName.Update.Handle)
+               resourceGroup.Delete("/{id}", hc.ResourceName.Delete.Handle)
+           }
+       }
+
+       // Url mapping for stream sinks
+       sinksGroup := applicationGroup.Router.Group("/sinks")
+	   sinksGroup.Post("/entityX/messages", hc.entityXHandler.Handle)
+
+       // Url mapping for bigqueue consumers
+       consumersGroup := applicationGroup.Router.Group("/consumers")
+	   consumersGroup.Post("/entityX/messages", hc.entityXHandler.Handle)
+
+       // Url mapping for jobs 
+       jobsGroup := app.Group("/jobs")
+	   jobsGroup.Post("/[JOB NAME]/executions", hc.jobHandler.Handler)
+   }
+   ```
+
+4. **Naming Conventions**
+   - Handlers Container: `HandlersContainer`
+   - Handler Groups: `{Resource}Handlers`
+   - Registration Methods: `registerEndpoints`
+   - Router Variables: use descriptive names with `Group` suffix
+
+5. **File Organization**
+   ```
+   /router
+     handlers_container.go  # Container definition and constructor
+     url_mappings.go       # Routes configuration
+   ```
+
+6. **Grouping Patterns**
+   - Group related endpoints
+   - Use nested groups for hierarchical resources
+   - Maintain consistency in URL structure
+   - Follow RESTful principles
+
+7. **Best Practices**
+   - Must use fury_go-platform library
+   - Maintain single responsibility principle
+   - Use constants for repeated values
+   - Document route groups when necessary
+   - Maintain consistency in routing style
+   - Group your endpoints according to:
+     - web endpoints 
+     - bigqueue consumer endpoints
+     - stream sink endpoints
+     - job endpoints
+   - Add custom group if is explicity asked
+
+### Application Wiring Rules
+
+Configuration for resolve dependencies needed for every struct in the project
+
+1. **Aplication Structure**
+  - Main wiring logic should be in `/internal/app/application.go`
+  - Use `doWiring()` method to configure all dependencies
+  - Break down initialization into focused helper methods
+
+2. **Intialization Flow**
+   ```go
+   func doWiring() *fury.Application {
+       config := appConfig.NewConfig()
+       providers := initializeProviders(config)
+       repositories, publishers := initializeAdapters(providers)
+       useCases := initializeUseCases(repositories, publishers)
+       handlers := initializeHandlers(useCases)
+       handlersContainer router.NewHandlersContainer(handlers)
+       app := router.NewWebApplication(config, handlersContainer)
+	return app
+   }
+   ```
+3. **Helper Methods Organization**
+ - Create separate methods for each layer initialization
+ - Pass only required dependencies to each method
+ - Keep methods focused and single-purpose
+
+4. **Dependency Grouping**
+ - Group providers by technology (KVS, BigQueue, etc.)
+ - Group repositories by domain entity
+ - Group publishers by domain entity
+ - Group use cases by feature
+ - Group handlers by resource and action
+
+ 5. **Configuration**
+ - Use environment variables for external configuration
+ - Define every configuration property inside `/internal/app/config/environment_config_{dev|beta|test|prod}.go` within method `new{Dev|Beta|Test|Prod}EnvironmentConfigs`
+ - Group related configurations in structs
+ - Use config variable for initialize providers
+ - Do not change the base config file `/internal/app/config/config.go` unless strictly necessary 
+ - Read fury official documentation to know configuration details When dealing with fury services like KVS, BIGQUEUE, STREAMS, NOSQL, etc.
+
+ 6. **Provider Configuration**
+   - Create specific configurations for each external service
+   - Group BigQueue, Streams configurations by domain/use case
+   - Example for KVS:
+     ```go
+     kvsClient := kvs.Config{
+         ContainerName: config.KVS.ContainerName,
+         Options: []kvs.OptionClient{
+             kvs.WithReadTimeout(time.Duration(config.KVS.ReadTimeout) * time.Millisecond),
+             kvs.WithWriteTimeout(time.Duration(config.KVS.WriteTimeout) * time.Millisecond),
+             kvs.WithReadRetries(config.KVS.MaxRetries, config.KVS.BackoffFunc),
+         },
+     }.NewKVSClient()
+     ```
+   - Example for BigQueue:
+     ```go
+     accountEventsConfig := bigq.Config{
+         Options: []bigq.Option{
+             bigq.WithQueueName(config.BigQ.AccountEvents.QueueName),
+             bigq.WithTimeout(time.Duration(config.BigQ.Timeout) * time.Millisecond),
+             bigq.WithMaxRetries(config.BigQ.MaxRetries),
+         },
+     }
+     ```
+ 7. **Best Practices**
+   - Always validate configurations against official Fury documentation
+   - Use proper time.Duration for timeouts
+   - Configure retries and backoff strategies appropriately
+   - Group related configurations logically
+   - Keep provider configurations explicit and domain-specific

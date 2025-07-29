@@ -1,0 +1,17 @@
+## General Rules
+
+- Write code in English language
+- Write comments and documentation in Spanish language
+- If you don't know the answer to a request, say so instead of making something up
+- Always verify generated code and remove unused functions
+- Fix linting errors immediately
+- Follow Go best practices and idiomatic patterns
+- Keep the code simple and maintainable
+- Write meaningful tests for all new features
+- Keep dependencies up to date and minimal
+- Document all configuration changes in README.md
+
+- Write comments and documents in spanish language
+- If you don't know the answer to a request, say so instead of making something up.
+- Check always fury official documentation
+- Always verify generated code and remove unused functions, fix linting errors

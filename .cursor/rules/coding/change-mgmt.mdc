@@ -1,0 +1,113 @@
+# Change Management Guidelines
+- Follow generals rules [generals.mdc](../generals.mdc)
+
+### 1. Branch Model
+
+- All branch names and commit messages must be written in English
+- Use kebab-case for naming branches
+- Follow GitFlow model for branch management
+- Use semantic versioning
+- Write meaningful commit messages
+- Keep commits atomic and focused
+- Review code before merging
+
+#### Feature Branches
+- Naming format: `feature/description-in-kebab-case`
+- Example: `feature/price-alert-notifications`
+
+#### Fix Branches
+- Naming format: `fix/description-in-kebab-case`
+- Example: `fix/telegram-notification-error`
+
+#### Release Branches
+- Naming format: `release/version`
+- Example: `release/1.2.0`
+
+### 2. Commit Message Examples
+- Good: `feat(alerts): add WhatsApp notification support`
+- Good: `fix(monitor): handle Bitcoin API timeout errors`
+- Good: `docs(readme): update setup instructions`
+- Bad: `fix bug`
+- Bad: `update code`
+
+### 3. Pull Request Format
+
+```markdown
+## Description
+[Explain the changes and why they were made]
+
+## Changes Made
+- [List the main changes]
+- [Include any technical details]
+
+## Testing
+[Explain how to test these changes]
+
+## Screenshots
+[If applicable, add screenshots]
+
+## Related Issues
+[Reference any related issues or tickets]
+```
+
+### 4. Pull Request Review Checklist
+- [ ] PR title is clear and descriptive
+- [ ] Code follows project style guidelines
+- [ ] Tests are included and passing
+- [ ] Documentation is updated
+- [ ] Commit messages are clear and follow conventions
+- [ ] No unnecessary changes or debug code
+- [ ] Error handling is implemented
+- [ ] Performance impact is considered
+
+### 5. Example Pull Request
+
+```markdown
+## Description
+Add WhatsApp notification support for price alerts. This allows users to receive
+Bitcoin price alerts via WhatsApp messages.
+
+## Changes Made
+- Added WhatsApp notification strategy
+- Updated alert creation form with WhatsApp option
+- Added WhatsApp number validation
+- Updated configuration for WhatsApp API credentials
+- Added unit tests for WhatsApp notifications
+
+## Testing
+1. Configure WhatsApp credentials in .env
+2. Create new alert with WhatsApp enabled
+3. Verify notification is sent when price condition is met
+
+## Screenshots
+![WhatsApp Alert Form](path/to/screenshot.png)
+
+## Related Issues
+- Closes #42: WhatsApp Integration
+```
+
+### 6. Version Control Best Practices
+- Keep commits small and focused on a single change
+- Write descriptive commit messages that explain why, not just what
+- Rebase feature branches on main before requesting review
+- Squash commits before merging if needed
+- Delete branches after merging
+- Never commit sensitive data (API keys, credentials)
+
+### 7. Release Process
+1. Create release branch from main
+2. Update version numbers and CHANGELOG.md
+3. Run full test suite
+4. Create release tag
+5. Merge to main
+6. Deploy to production
+7. Monitor for any issues
+
+### 8. Hotfix Process
+1. Create hotfix branch from main
+2. Make minimal required changes
+3. Test thoroughly
+4. Update version number
+5. Merge to main and release branch
+6. Deploy to production
+7. Document the issue and solution
