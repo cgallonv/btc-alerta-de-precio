@@ -1,14 +1,95 @@
 // Variables globales
 let priceChart;
 let currentPrice = 0;
-let updateInterval = 30000; // Default 30 segundos, se actualiza desde el backend
+let updateInterval = 15000; // Default 15 segundos
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
+    initializeTopBar();
     initializeApp();
     setupEventListeners();
     loadConfig(); // Cargar configuración antes de iniciar updates
 });
+
+// Inicializar top bar
+function initializeTopBar() {
+    // Actualizar intervalo en la UI
+    const updateIntervalDisplay = () => {
+        const intervalSeconds = updateInterval / 1000;
+        const updateIntervalElement = document.getElementById('updateInterval');
+        if (updateIntervalElement) {
+            updateIntervalElement.textContent = intervalSeconds;
+        }
+    };
+
+    // Manejar estado de conexión
+    const updateConnectionStatus = (isOnline) => {
+        const indicator = document.getElementById('connectionIndicator');
+        if (!indicator) return;
+
+        // Preparar la nueva clase y contenido
+        const newClass = isOnline ? 'badge bg-success online' : 'badge bg-danger offline';
+        const newContent = isOnline ? 
+            '<i class="fas fa-wifi"></i> Conectado' : 
+            '<i class="fas fa-exclamation-triangle"></i> Desconectado';
+
+        // Aplicar cambios con animación
+        indicator.style.opacity = '0';
+        setTimeout(() => {
+            indicator.className = newClass;
+            indicator.innerHTML = newContent;
+            indicator.style.opacity = '1';
+        }, 150);
+
+        // Mostrar notificación
+        if (!isOnline) {
+            showNotification('Se perdió la conexión', 'warning');
+        } else {
+            showNotification('Conexión restaurada', 'success');
+        }
+    };
+
+    // Escuchar eventos de conexión
+    window.addEventListener('online', () => updateConnectionStatus(true));
+    window.addEventListener('offline', () => updateConnectionStatus(false));
+
+    // Monitorear estado de conexión con el servidor
+    let lastServerCheck = Date.now();
+    const checkServerConnection = async () => {
+        try {
+            console.log('🔍 Verificando conexión con el servidor...');
+            const response = await fetch('/api/v1/health', { 
+                method: 'HEAD',
+                cache: 'no-cache'
+            });
+            
+            // Cualquier respuesta (incluso 404) significa que el servidor está vivo
+            lastServerCheck = Date.now();
+            if (response.ok || response.status === 404) {
+                console.log('✅ Servidor respondiendo correctamente');
+                updateConnectionStatus(true);
+            } else {
+                console.warn('⚠️ Error en respuesta del servidor:', response.status);
+                throw new Error('Server error');
+            }
+        } catch (error) {
+            const timeSinceLastCheck = Date.now() - lastServerCheck;
+            if (timeSinceLastCheck > 5000) { // Solo mostrar desconexión después de 5 segundos
+                console.error('❌ Error de conexión:', error);
+                updateConnectionStatus(false);
+            }
+        }
+    };
+
+    // Verificar conexión cada 15 segundos y al inicio
+    console.log('🔄 Iniciando monitoreo de conexión');
+    setInterval(checkServerConnection, 15000);
+    checkServerConnection();
+
+    // Inicializar valores
+    updateIntervalDisplay();
+    updateConnectionStatus(navigator.onLine);
+}
 
 function initializeApp() {
     // Inicializar elemento de cambio de precio
@@ -44,23 +125,36 @@ async function loadConfig() {
 }
 
 function setupEventListeners() {
-    // Form de alertas
-    document.getElementById('alertForm').addEventListener('submit', createAlert);
-    
-    // Cambio de tipo de alerta
-    document.getElementById('alertType').addEventListener('change', function() {
-        toggleAlertFields(this.value);
-    });
-
-    // Toggle WhatsApp number field
-    document.getElementById('enableWhatsApp').addEventListener('change', function() {
-        const whatsAppGroup = document.getElementById('whatsAppGroup');
-        whatsAppGroup.style.display = this.checked ? 'block' : 'none';
+    // Form de alertas (solo en página de alertas)
+    const alertForm = document.getElementById('alertForm');
+    if (alertForm) {
+        alertForm.addEventListener('submit', createAlert);
         
-        // Make WhatsApp number required if WhatsApp is enabled
-        const whatsAppNumber = document.getElementById('whatsAppNumber');
-        whatsAppNumber.required = this.checked;
-    });
+        // Cambio de tipo de alerta
+        const alertType = document.getElementById('alertType');
+        if (alertType) {
+            alertType.addEventListener('change', function() {
+                toggleAlertFields(this.value);
+            });
+        }
+
+        // Toggle WhatsApp number field
+        const enableWhatsApp = document.getElementById('enableWhatsApp');
+        if (enableWhatsApp) {
+            enableWhatsApp.addEventListener('change', function() {
+                const whatsAppGroup = document.getElementById('whatsAppGroup');
+                if (whatsAppGroup) {
+                    whatsAppGroup.style.display = this.checked ? 'block' : 'none';
+                    
+                    // Make WhatsApp number required if WhatsApp is enabled
+                    const whatsAppNumber = document.getElementById('whatsAppNumber');
+                    if (whatsAppNumber) {
+                        whatsAppNumber.required = this.checked;
+                    }
+                }
+            });
+        }
+    }
 }
 
 function toggleAlertFields(alertType) {
@@ -590,12 +684,19 @@ async function editAlert(alertId) {
         const alert = response.data;
         
         // Configurar el modal según el tipo de alerta
-        document.getElementById('editAlertId').value = alertId;
-        document.getElementById('editAlertType').value = alert.type;
+        const editAlertId = document.getElementById('editAlertId');
+        const editAlertType = document.getElementById('editAlertType');
+        
+        if (!editAlertId || !editAlertType) return;
+        
+        editAlertId.value = alertId;
+        editAlertType.value = alert.type;
         
         const editValueLabel = document.getElementById('editValueLabel');
         const editValueHelp = document.getElementById('editValueHelp');
         const editValueInput = document.getElementById('editValue');
+        
+        if (!editValueLabel || !editValueHelp || !editValueInput) return;
         
         if (alert.type === 'above' || alert.type === 'below') {
             editValueLabel.textContent = 'Precio Objetivo ($)';
@@ -613,26 +714,38 @@ async function editAlert(alertId) {
         }
 
         // Configurar opciones de notificación
-        document.getElementById('editEnableEmail').checked = alert.enable_email;
-        document.getElementById('editEnableTelegram').checked = alert.enable_telegram;
-        document.getElementById('editEnableWebPush').checked = alert.enable_web_push;
-        document.getElementById('editEnableWhatsApp').checked = alert.enable_whatsapp;
-        document.getElementById('editWhatsAppNumber').value = alert.whatsapp_number || '';
-        document.getElementById('editLanguage').value = alert.language || 'es';
+        const editEnableEmail = document.getElementById('editEnableEmail');
+        const editEnableTelegram = document.getElementById('editEnableTelegram');
+        const editEnableWhatsApp = document.getElementById('editEnableWhatsApp');
+        const editWhatsAppNumber = document.getElementById('editWhatsAppNumber');
+        const editLanguage = document.getElementById('editLanguage');
+
+        if (editEnableEmail) editEnableEmail.checked = alert.enable_email;
+        if (editEnableTelegram) editEnableTelegram.checked = alert.enable_telegram;
+        if (editEnableWhatsApp) editEnableWhatsApp.checked = alert.enable_whatsapp;
+        if (editWhatsAppNumber) editWhatsAppNumber.value = alert.whatsapp_number || '';
+        if (editLanguage) editLanguage.value = alert.language || 'es';
 
         // Mostrar/ocultar campo de WhatsApp
         const editWhatsAppGroup = document.getElementById('editWhatsAppGroup');
-        editWhatsAppGroup.style.display = alert.enable_whatsapp ? 'block' : 'none';
+        if (editWhatsAppGroup && editEnableWhatsApp) {
+            editWhatsAppGroup.style.display = alert.enable_whatsapp ? 'block' : 'none';
+            
+            // Configurar evento para toggle de WhatsApp
+            editEnableWhatsApp.addEventListener('change', function() {
+                editWhatsAppGroup.style.display = this.checked ? 'block' : 'none';
+                if (editWhatsAppNumber) {
+                    editWhatsAppNumber.required = this.checked;
+                }
+            });
+        }
         
         // Mostrar modal
-        const modal = new bootstrap.Modal(document.getElementById('editAlertModal'));
-        modal.show();
-
-        // Configurar evento para toggle de WhatsApp
-        document.getElementById('editEnableWhatsApp').addEventListener('change', function() {
-            editWhatsAppGroup.style.display = this.checked ? 'block' : 'none';
-            document.getElementById('editWhatsAppNumber').required = this.checked;
-        });
+        const modalElement = document.getElementById('editAlertModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
         
     } catch (error) {
         console.error('Error loading alert for editing:', error);

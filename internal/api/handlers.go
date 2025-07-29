@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
+	"time"
 
 	"btc-alerta-de-precio/internal/interfaces"
 	"btc-alerta-de-precio/internal/storage"
@@ -49,6 +50,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		"web/templates/alerts.html",
 		"web/templates/partials/edit_alert_modal.html",
 		"web/templates/partials/hamburger_menu.html",
+		"web/templates/partials/top_bar.html",
 	))
 	router.SetHTMLTemplate(templ)
 
@@ -59,6 +61,10 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	// API routes
 	api := router.Group("/api/v1")
 	{
+		// System
+		api.GET("/health", h.healthCheck)
+		api.HEAD("/health", h.healthCheck) // Add HEAD request support
+
 		// Bitcoin price
 		api.GET("/price", h.getCurrentPrice)
 		api.GET("/price/history", h.getPriceHistory)
@@ -84,9 +90,6 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		api.GET("/config", h.getConfig)
 		api.POST("/preload-alerts", h.preloadAlerts)      // 🆕 Endpoint para precargar alertas
 		api.POST("/delete-all-alerts", h.deleteAllAlerts) // 🆕 Endpoint para eliminar todas las alertas
-
-		// System
-		api.GET("/health", h.healthCheck)
 	}
 }
 
@@ -96,6 +99,7 @@ func (h *Handler) indexPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", gin.H{
 		"stats":       stats,
 		"CurrentPage": "dashboard",
+		"Version":     time.Now().Unix(), // Add timestamp as version
 	})
 }
 
@@ -103,6 +107,7 @@ func (h *Handler) indexPage(c *gin.Context) {
 func (h *Handler) alertsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "alerts.html", gin.H{
 		"CurrentPage": "alerts",
+		"Version":     time.Now().Unix(), // Add timestamp as version
 	})
 }
 

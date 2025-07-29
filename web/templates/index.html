@@ -28,22 +28,14 @@
             transition: all 0.3s ease;
         }
         
-        .price-change.positive {
-            color: #28a745;
-        }
+        .price-change.positive { color: #28a745; }
+        .price-change.negative { color: #dc3545; }
+        .price-change.neutral { color: #6c757d; }
         
-        .price-change.negative {
-            color: #dc3545;
-        }
-        
-        .price-change.neutral {
-            color: #6c757d;
-        }
         .alert-card { transition: transform 0.2s; }
         .alert-card:hover { transform: translateY(-2px); }
         .status-active { color: #28a745; }
         .status-inactive { color: #dc3545; }
-        .bg-bitcoin { background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%); }
         
         /* Animaciones para actualizaciones automáticas */
         .price-updating {
@@ -69,18 +61,6 @@
             transform: scale(1.05);
         }
         
-        /* Indicador de conexión */
-        .connection-status {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 9999;
-            font-size: 0.8rem;
-        }
-        
-        .online { color: #28a745; }
-        .offline { color: #dc3545; }
-        
         /* Pulso para indicar actualización */
         @keyframes pulse {
             0% { opacity: 1; }
@@ -91,56 +71,14 @@
         .updating {
             animation: pulse 1s ease-in-out;
         }
-        /* Hamburger button improved visibility */
-        #hamburgerBtn {
-            background: #fff !important;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            color: #f7931a !important;
-            border: none;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: box-shadow 0.2s, background 0.2s;
-        }
-        #hamburgerBtn:hover, #hamburgerBtn:focus {
-            background: #ffe3c1 !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-            outline: none;
-        }
-        #hamburgerBtn i {
-            color: #f7931a !important;
-            font-size: 2rem;
-        }
-        .nav-link.active { background-color: rgba(255, 255, 255, 0.2); }
-        .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
     </style>
 </head>
 <body class="bg-light">
+    <!-- Include Top Bar -->
+    {{ template "top_bar" . }}
+
     <!-- Include Hamburger Menu -->
     {{ template "hamburger_menu" . }}
-
-    <!-- Connection Status -->
-    <div class="connection-status">
-        <span id="connectionIndicator" class="badge bg-success online">
-            <i class="fas fa-wifi"></i> Conectado
-        </span>
-    </div>
-
-    <nav class="navbar navbar-expand-lg bg-bitcoin text-white mb-4">
-        <div class="container">
-            <a class="navbar-brand text-white" href="/">
-                <i class="fab fa-bitcoin"></i> Bitcoin Price Alert
-            </a>
-            <div class="navbar-nav ms-auto">
-                <span class="nav-text text-white me-3">
-                    <i class="fas fa-chart-line"></i> Actualización cada 15s
-                </span>
-            </div>
-        </div>
-    </nav>
 
     <div class="container mt-4">
         <!-- Stats Row -->
@@ -205,7 +143,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v={{ .Version }}"></script>
 </body>
 </html>
 {{ end }} 

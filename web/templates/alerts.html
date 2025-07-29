@@ -10,9 +10,6 @@
     <style>
         .bitcoin-color { color: #f7931a; }
         .card-header { background: linear-gradient(45deg, #f7931a, #ffb347); color: white; }
-        .bg-bitcoin { background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%); }
-        .nav-link.active { background-color: rgba(255, 255, 255, 0.2); }
-        .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
         .alert-card { transition: transform 0.2s; }
         .alert-card:hover { transform: translateY(-2px); }
         .status-active { color: #28a745; }
@@ -20,15 +17,11 @@
     </style>
 </head>
 <body class="bg-light">
+    <!-- Include Top Bar -->
+    {{ template "top_bar" . }}
+
     <!-- Include Hamburger Menu -->
     {{ template "hamburger_menu" . }}
-
-    <!-- Connection Status -->
-    <div class="connection-status">
-        <span id="connectionIndicator" class="badge bg-success online">
-            <i class="fas fa-wifi"></i> Conectado
-        </span>
-    </div>
 
     <div class="container mt-4">
         <div class="row">
@@ -58,12 +51,7 @@
                             </div>
                             <div class="mb-3" id="percentageGroup" style="display: none;">
                                 <label class="form-label">Porcentaje de Cambio (%)</label>
-                                <input type="number" class="form-control" id="percentage" step="0.1" min="-100" max="100" 
-                                       placeholder="Ej: 3 para subida 3%, -3 para bajada 3%">
-                                <div class="form-text">
-                                    <small>• <strong>Positivo</strong> (ej: 3): alerta cuando sube 3% o más</small><br>
-                                    <small>• <strong>Negativo</strong> (ej: -3): alerta cuando baja 3% o más</small>
-                                </div>
+                                <input type="number" class="form-control" id="percentage" step="0.1" min="0.1">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
@@ -94,19 +82,11 @@
                                 <label class="form-label">
                                     <i class="fab fa-whatsapp"></i> Número de WhatsApp
                                 </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">+</span>
-                                    <input type="tel" class="form-control" id="whatsAppNumber" 
-                                           placeholder="1234567890" pattern="[0-9]+"
-                                           title="Ingresa solo números, sin espacios ni símbolos">
-                                </div>
-                                <div class="form-text">
-                                    Formato internacional sin '+' (ej: 573001234567 para Colombia)
-                                </div>
+                                <input type="text" class="form-control" id="whatsAppNumber">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Idioma de las Notificaciones</label>
-                                <select class="form-control" id="language">
+                                <label class="form-label">Idioma</label>
+                                <select class="form-control" id="language" required>
                                     <option value="es">Español</option>
                                     <option value="en">English</option>
                                 </select>
@@ -152,7 +132,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v={{ .Version }}"></script>
 </body>
 </html>
 {{ end }} 
