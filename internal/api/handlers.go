@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 
@@ -40,10 +41,20 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	// Servir archivos estáticos
 	router.Static("/static", "./web/static")
 	router.StaticFile("/sw.js", "./web/sw.js") // Serve service worker at root
-	router.LoadHTMLGlob("web/templates/*")
+
+	// Load templates programmatically
+	templ := template.New("")
+	templ = template.Must(templ.ParseFiles(
+		"web/templates/index.html",
+		"web/templates/alerts.html",
+		"web/templates/partials/edit_alert_modal.html",
+		"web/templates/partials/hamburger_menu.html",
+	))
+	router.SetHTMLTemplate(templ)
 
 	// Página principal
 	router.GET("/", h.indexPage)
+	router.GET("/alerts", h.alertsPage)
 
 	// API routes
 	api := router.Group("/api/v1")
@@ -83,7 +94,15 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 func (h *Handler) indexPage(c *gin.Context) {
 	stats, _ := h.alertService.GetStats()
 	c.HTML(http.StatusOK, "index.html", gin.H{
-		"stats": stats,
+		"stats":       stats,
+		"CurrentPage": "dashboard",
+	})
+}
+
+// Alerts page
+func (h *Handler) alertsPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "alerts.html", gin.H{
+		"CurrentPage": "alerts",
 	})
 }
 

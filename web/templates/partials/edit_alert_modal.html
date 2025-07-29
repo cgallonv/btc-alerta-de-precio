@@ -1,0 +1,84 @@
+{{ define "edit_alert_modal" }}
+<!-- Modal para Editar Alerta -->
+<div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editAlertModalLabel">
+                    <i class="fas fa-edit"></i> Editar Alerta
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAlertForm">
+                    <div class="mb-3">
+                        <label for="editValue" class="form-label" id="editValueLabel">Nuevo Valor</label>
+                        <input type="number" class="form-control" id="editValue" step="0.01" min="0" required>
+                        <div class="form-text" id="editValueHelp">
+                            Ingresa el nuevo valor para la alerta
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipos de Notificación</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editEnableEmail">
+                            <label class="form-check-label">
+                                <i class="fas fa-envelope text-primary"></i> Email
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editEnableTelegram">
+                            <label class="form-check-label">
+                                <i class="fab fa-telegram text-info"></i> Telegram
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editEnableWebPush">
+                            <label class="form-check-label">
+                                <i class="fas fa-globe text-warning"></i> Web Push
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editEnableWhatsApp">
+                            <label class="form-check-label">
+                                <i class="fab fa-whatsapp text-success"></i> WhatsApp
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="editWhatsAppGroup" style="display: none;">
+                        <label class="form-label">
+                            <i class="fab fa-whatsapp"></i> Número de WhatsApp
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">+</span>
+                            <input type="tel" class="form-control" id="editWhatsAppNumber" 
+                                   placeholder="1234567890" pattern="[0-9]+"
+                                   title="Ingresa solo números, sin espacios ni símbolos">
+                        </div>
+                        <div class="form-text">
+                            Formato internacional sin '+' (ej: 573001234567 para Colombia)
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Idioma de las Notificaciones</label>
+                        <select class="form-control" id="editLanguage">
+                            <option value="es">Español</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="editAlertId">
+                    <input type="hidden" id="editAlertType">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveEditAlert()">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }} 

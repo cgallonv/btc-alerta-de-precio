@@ -1,0 +1,175 @@
+{{ define "alerts.html" }}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Price Alert - Alerts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .bitcoin-color { color: #f7931a; }
+        .card-header { background: linear-gradient(45deg, #f7931a, #ffb347); color: white; }
+        .bg-bitcoin { background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%); }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.2); }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
+        .alert-card { transition: transform 0.2s; }
+        .alert-card:hover { transform: translateY(-2px); }
+        .status-active { color: #28a745; }
+        .status-inactive { color: #dc3545; }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Include Hamburger Menu -->
+    {{ template "hamburger_menu" . }}
+
+    <!-- Connection Status -->
+    <div class="connection-status">
+        <span id="connectionIndicator" class="badge bg-success online">
+            <i class="fas fa-wifi"></i> Conectado
+        </span>
+    </div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plus"></i> Nueva Alerta</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="alertForm">
+                            <div class="mb-3">
+                                <label class="form-label">Nombre de la Alerta</label>
+                                <input type="text" class="form-control" id="alertName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tipo de Alerta</label>
+                                <select class="form-control" id="alertType" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="above">Precio por encima de</option>
+                                    <option value="below">Precio por debajo de</option>
+                                    <option value="change">Cambio porcentual</option>
+                                </select>
+                            </div>
+                            <div class="mb-3" id="priceGroup">
+                                <label class="form-label">Precio Objetivo ($)</label>
+                                <input type="number" class="form-control" id="targetPrice" step="0.01" min="0">
+                            </div>
+                            <div class="mb-3" id="percentageGroup" style="display: none;">
+                                <label class="form-label">Porcentaje de Cambio (%)</label>
+                                <input type="number" class="form-control" id="percentage" step="0.1" min="-100" max="100" 
+                                       placeholder="Ej: 3 para subida 3%, -3 para bajada 3%">
+                                <div class="form-text">
+                                    <small>• <strong>Positivo</strong> (ej: 3): alerta cuando sube 3% o más</small><br>
+                                    <small>• <strong>Negativo</strong> (ej: -3): alerta cuando baja 3% o más</small>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="alertEmail" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Tipos de Notificación</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableEmail" checked>
+                                    <label class="form-check-label">
+                                        <i class="fas fa-envelope text-primary"></i> Notificación por Email
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableTelegram" checked>
+                                    <label class="form-check-label">
+                                        <i class="fab fa-telegram text-info"></i> Notificación por Telegram
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableWebPush" checked>
+                                    <label class="form-check-label">
+                                        <i class="fas fa-globe text-warning"></i> Notificación Web Push (Chrome)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableWhatsApp">
+                                    <label class="form-check-label">
+                                        <i class="fab fa-whatsapp text-success"></i> Notificación por WhatsApp
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3" id="whatsAppGroup" style="display: none;">
+                                <label class="form-label">
+                                    <i class="fab fa-whatsapp"></i> Número de WhatsApp
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">+</span>
+                                    <input type="tel" class="form-control" id="whatsAppNumber" 
+                                           placeholder="1234567890" pattern="[0-9]+"
+                                           title="Ingresa solo números, sin espacios ni símbolos">
+                                </div>
+                                <div class="form-text">
+                                    Formato internacional sin '+' (ej: 573001234567 para Colombia)
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Idioma de las Notificaciones</label>
+                                <select class="form-control" id="language">
+                                    <option value="es">Español</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-bell"></i> Crear Alerta
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list"></i> Mis Alertas</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-danger me-2" onclick="deleteAllAlerts()">
+                                <i class="fas fa-trash"></i> Delete all
+                            </button>
+                            <button class="btn btn-sm btn-outline-light me-2" onclick="preloadAlerts()">
+                                <i class="fas fa-database"></i> Preload
+                            </button>
+                            <button class="btn btn-sm btn-outline-light" onclick="loadAlerts()">
+                                <i class="fas fa-refresh"></i> Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsList">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando alertas...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Alert Modal -->
+    {{ template "edit_alert_modal" . }}
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(registration => {
+                    console.log('✅ Service Worker registrado en la raíz:', registration);
+                })
+                .catch(error => {
+                    console.error('❌ Error registrando Service Worker:', error);
+                });
+        }
+    </script>
+</body>
+</html>
+{{ end }} 

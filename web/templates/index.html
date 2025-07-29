@@ -1,3 +1,4 @@
+{{ define "index.html" }}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -90,10 +91,38 @@
         .updating {
             animation: pulse 1s ease-in-out;
         }
+        /* Hamburger button improved visibility */
+        #hamburgerBtn {
+            background: #fff !important;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            color: #f7931a !important;
+            border: none;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: box-shadow 0.2s, background 0.2s;
+        }
+        #hamburgerBtn:hover, #hamburgerBtn:focus {
+            background: #ffe3c1 !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            outline: none;
+        }
+        #hamburgerBtn i {
+            color: #f7931a !important;
+            font-size: 2rem;
+        }
+        .nav-link.active { background-color: rgba(255, 255, 255, 0.2); }
+        .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
     </style>
 </head>
 <body class="bg-light">
-    <!-- Indicador de conexión -->
+    <!-- Include Hamburger Menu -->
+    {{ template "hamburger_menu" . }}
+
+    <!-- Connection Status -->
     <div class="connection-status">
         <span id="connectionIndicator" class="badge bg-success online">
             <i class="fas fa-wifi"></i> Conectado
@@ -116,7 +145,7 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container mt-4">
         <!-- Stats Row -->
         <div class="row mb-4">
             <div class="col-md-3">
@@ -171,219 +200,16 @@
                 </div>
             </div>
         </div>
-
-        <!-- Alerts Management -->
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-plus"></i> Nueva Alerta</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="alertForm">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre de la Alerta</label>
-                                <input type="text" class="form-control" id="alertName" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Tipo de Alerta</label>
-                                <select class="form-control" id="alertType" required>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="above">Precio por encima de</option>
-                                    <option value="below">Precio por debajo de</option>
-                                    <option value="change">Cambio porcentual</option>
-                                </select>
-                            </div>
-                            <div class="mb-3" id="priceGroup">
-                                <label class="form-label">Precio Objetivo ($)</label>
-                                <input type="number" class="form-control" id="targetPrice" step="0.01" min="0">
-                            </div>
-                            <div class="mb-3" id="percentageGroup" style="display: none;">
-                                <label class="form-label">Porcentaje de Cambio (%)</label>
-                                <input type="number" class="form-control" id="percentage" step="0.1" min="-100" max="100" 
-                                       placeholder="Ej: 3 para subida 3%, -3 para bajada 3%">
-                                <div class="form-text">
-                                    <small>• <strong>Positivo</strong> (ej: 3): alerta cuando sube 3% o más</small><br>
-                                    <small>• <strong>Negativo</strong> (ej: -3): alerta cuando baja 3% o más</small>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" id="alertEmail" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Tipos de Notificación</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableEmail" checked>
-                                    <label class="form-check-label">
-                                        <i class="fas fa-envelope text-primary"></i> Notificación por Email
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableTelegram" checked>
-                                    <label class="form-check-label">
-                                        <i class="fab fa-telegram text-info"></i> Notificación por Telegram
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableWebPush" checked>
-                                    <label class="form-check-label">
-                                        <i class="fas fa-globe text-warning"></i> Notificación Web Push (Chrome)
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableWhatsApp">
-                                    <label class="form-check-label">
-                                        <i class="fab fa-whatsapp text-success"></i> Notificación por WhatsApp
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3" id="whatsAppGroup" style="display: none;">
-                                <label class="form-label">
-                                    <i class="fab fa-whatsapp"></i> Número de WhatsApp
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">+</span>
-                                    <input type="tel" class="form-control" id="whatsAppNumber" 
-                                           placeholder="1234567890" pattern="[0-9]+"
-                                           title="Ingresa solo números, sin espacios ni símbolos">
-                                </div>
-                                <div class="form-text">
-                                    Formato internacional sin '+' (ej: 573001234567 para Colombia)
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Idioma de las Notificaciones</label>
-                                <select class="form-control" id="language">
-                                    <option value="es">Español</option>
-                                    <option value="en">English</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-bell"></i> Crear Alerta
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list"></i> Mis Alertas</h5>
-                        <div>
-                            <button class="btn btn-sm btn-outline-danger me-2" onclick="deleteAllAlerts()">
-                                <i class="fas fa-trash"></i> Delete all
-                            </button>
-                            <button class="btn btn-sm btn-outline-light me-2" onclick="preloadAlerts()">
-                                <i class="fas fa-database"></i> Preload
-                            </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="loadAlerts()">
-                                <i class="fas fa-refresh"></i> Actualizar
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="alertsList">
-                            <div class="text-center text-muted">
-                                <i class="fas fa-spinner fa-spin"></i> Cargando alertas...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Modal para Editar Alerta -->
-    <div class="modal fade" id="editAlertModal" tabindex="-1" aria-labelledby="editAlertModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editAlertModalLabel">
-                        <i class="fas fa-edit"></i> Editar Alerta
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="editAlertForm">
-                        <div class="mb-3">
-                            <label for="editValue" class="form-label" id="editValueLabel">Nuevo Valor</label>
-                            <input type="number" class="form-control" id="editValue" step="0.01" min="0" required>
-                            <div class="form-text" id="editValueHelp">
-                                Ingresa el nuevo valor para la alerta
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Tipos de Notificación</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="editEnableEmail">
-                                <label class="form-check-label">
-                                    <i class="fas fa-envelope text-primary"></i> Email
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="editEnableTelegram">
-                                <label class="form-check-label">
-                                    <i class="fab fa-telegram text-info"></i> Telegram
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="editEnableWebPush">
-                                <label class="form-check-label">
-                                    <i class="fas fa-globe text-warning"></i> Web Push
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="editEnableWhatsApp">
-                                <label class="form-check-label">
-                                    <i class="fab fa-whatsapp text-success"></i> WhatsApp
-                                </label>
-                            </div>
-                        </div>
-                        <div class="mb-3" id="editWhatsAppGroup" style="display: none;">
-                            <label class="form-label">
-                                <i class="fab fa-whatsapp"></i> Número de WhatsApp
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text">+</span>
-                                <input type="tel" class="form-control" id="editWhatsAppNumber" 
-                                       placeholder="1234567890" pattern="[0-9]+"
-                                       title="Ingresa solo números, sin espacios ni símbolos">
-                            </div>
-                            <div class="form-text">
-                                Formato internacional sin '+' (ej: 573001234567 para Colombia)
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Idioma de las Notificaciones</label>
-                            <select class="form-control" id="editLanguage">
-                                <option value="es">Español</option>
-                                <option value="en">English</option>
-                            </select>
-                        </div>
-                        <input type="hidden" id="editAlertId">
-                        <input type="hidden" id="editAlertType">
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="saveEditAlert()">
-                        <i class="fas fa-save"></i> Guardar Cambios
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Edit Alert Modal -->
+    {{ template "edit_alert_modal" . }}
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/js/app.js"></script>
     <script>
-        // Registrar Service Worker en la raíz
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' })
                 .then(registration => {
@@ -395,4 +221,5 @@
         }
     </script>
 </body>
-</html> 
+</html>
+{{ end }} 
