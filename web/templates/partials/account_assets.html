@@ -6,7 +6,9 @@
                 <thead>
                     <tr>
                         <th>Asset</th>
-                        <th>Amount</th>
+                        <th>Available</th>
+                        <th>Locked</th>
+                        <th>Total</th>
                         <th>Value (USD)</th>
                         <th>24h Change</th>
                     </tr>
@@ -20,10 +22,12 @@
                                 <span>{{ .Symbol }}</span>
                             </div>
                         </td>
-                        <td>{{ .Amount }}</td>
-                        <td>${{ .ValueUSD }}</td>
+                        <td>{{ .Free }}</td>
+                        <td>{{ .Locked }}</td>
+                        <td>{{ .Total }}</td>
+                        <td>${{ printf "%.2f" .ValueUSD }}</td>
                         <td class="{{ if gt .Change24h 0.0 }}text-success{{ else }}text-danger{{ end }}">
-                            {{ .Change24h }}%
+                            {{ printf "%.2f" .Change24h }}%
                         </td>
                     </tr>
                     {{ end }}

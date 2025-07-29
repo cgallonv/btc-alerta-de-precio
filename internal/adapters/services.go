@@ -176,3 +176,14 @@ func (a *ConfigAdapter) IsTelegramNotificationsEnabled() bool {
 func (a *ConfigAdapter) GetVAPIDPublicKey() string {
 	return a.config.VAPIDPublicKey
 }
+
+func (a *ConfigAdapter) GetString(key string) string {
+	switch key {
+	case "binance.api_key":
+		return a.config.BinanceAPIKey
+	case "binance.api_secret":
+		return a.config.BinanceAPISecret
+	default:
+		return ""
+	}
+}

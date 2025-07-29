@@ -51,4 +51,5 @@ type ConfigProvider interface {
 	IsWebPushNotificationsEnabled() bool
 	IsTelegramNotificationsEnabled() bool
 	GetVAPIDPublicKey() string
+	GetString(key string) string
 }

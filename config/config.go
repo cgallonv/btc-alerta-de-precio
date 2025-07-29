@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -50,14 +51,29 @@ type Config struct {
 	WhatsAppBusinessAccID  string
 	WhatsAppTemplateNameES string
 	WhatsAppTemplateNameEN string
+
+	// Binance API
+	BinanceAPIKey    string
+	BinanceAPISecret string
 }
 
 func Load() (*Config, error) {
 	// Cargar .env si existe
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		log.Printf("Error loading .env file: %v", err)
+	} else {
+		log.Printf(".env file loaded successfully")
+	}
 
 	checkInterval, _ := time.ParseDuration(getEnv("CHECK_INTERVAL", "30s"))
 	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
+
+	// Add debug logging for Binance API credentials
+	binanceKey := getEnv("BINANCE_API_KEY", "")
+	binanceSecret := getEnv("BINANCE_API_SECRET", "")
+	log.Printf("Binance API Key length: %d", len(binanceKey))
+	log.Printf("Binance API Secret length: %d", len(binanceSecret))
 
 	return &Config{
 		Port:          getEnv("PORT", "8080"),
@@ -94,7 +110,22 @@ func Load() (*Config, error) {
 		WhatsAppBusinessAccID:  getEnv("WHATSAPP_BUSINESS_ACCOUNT_ID", ""),
 		WhatsAppTemplateNameES: getEnv("WHATSAPP_TEMPLATE_NAME_ES", "btc_alert_es"),
 		WhatsAppTemplateNameEN: getEnv("WHATSAPP_TEMPLATE_NAME_EN", "btc_alert_en"),
+
+		// Binance API configuration
+		BinanceAPIKey:    binanceKey,
+		BinanceAPISecret: binanceSecret,
 	}, nil
+}
+
+func (c *Config) GetString(key string) string {
+	switch key {
+	case "binance.api_key":
+		return c.BinanceAPIKey
+	case "binance.api_secret":
+		return c.BinanceAPISecret
+	default:
+		return ""
+	}
 }
 
 func getEnv(key, defaultValue string) string {

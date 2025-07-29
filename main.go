@@ -82,11 +82,10 @@ func main() {
 		log.Fatalf("Error starting alert manager: %v", err)
 	}
 
-	// Configure and start web server
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	// Set Gin to release mode
+	gin.SetMode(gin.ReleaseMode)
 
+	// Configure and start web server
 	router := gin.Default()
 
 	// Create API handler with adapter

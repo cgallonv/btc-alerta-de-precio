@@ -1,6 +1,7 @@
 {{ define "account_balance" }}
 <div class="balance-summary">
-    <div class="row g-3">
+    <!-- Account Overview -->
+    <div class="row g-3 mb-4">
         <div class="col-md-6">
             <div class="balance-item">
                 <h6 class="text-muted">Total Balance</h6>
@@ -14,10 +15,117 @@
             </div>
         </div>
     </div>
-    <hr>
-    <div class="d-flex justify-content-between align-items-center">
-        <span class="text-muted">Last Updated</span>
-        <span>{{ .account.LastUpdated }}</span>
+
+    <!-- Account Status -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Account Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <span class="text-muted">Account Type:</span>
+                            <span class="float-end">{{ .account.AccountType }}</span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="text-muted">Trading Status:</span>
+                            <span class="float-end">
+                                {{ if .account.CanTrade }}
+                                    <span class="badge bg-success">Enabled</span>
+                                {{ else }}
+                                    <span class="badge bg-danger">Disabled</span>
+                                {{ end }}
+                            </span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="text-muted">Withdrawals:</span>
+                            <span class="float-end">
+                                {{ if .account.CanWithdraw }}
+                                    <span class="badge bg-success">Enabled</span>
+                                {{ else }}
+                                    <span class="badge bg-danger">Disabled</span>
+                                {{ end }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <span class="text-muted">Deposits:</span>
+                            <span class="float-end">
+                                {{ if .account.CanDeposit }}
+                                    <span class="badge bg-success">Enabled</span>
+                                {{ else }}
+                                    <span class="badge bg-danger">Disabled</span>
+                                {{ end }}
+                            </span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="text-muted">Self-Trade Prevention:</span>
+                            <span class="float-end">
+                                {{ if .account.RequireSelfTradePrevention }}
+                                    <span class="badge bg-warning">Required</span>
+                                {{ else }}
+                                    <span class="badge bg-secondary">Optional</span>
+                                {{ end }}
+                            </span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="text-muted">Permissions:</span>
+                            <span class="float-end">
+                                {{ range .account.Permissions }}
+                                    <span class="badge bg-info me-1">{{ . }}</span>
+                                {{ end }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Commission Rates -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-percentage"></i> Commission Rates</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <span class="text-muted">Maker Fee:</span>
+                            <span class="float-end">{{ .account.CommissionRates.Maker }}%</span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="text-muted">Taker Fee:</span>
+                            <span class="float-end">{{ .account.CommissionRates.Taker }}%</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <span class="text-muted">Buyer Fee:</span>
+                            <span class="float-end">{{ .account.CommissionRates.Buyer }}%</span>
+                        </li>
+                        <li class="mb-2">
+                            <span class="text-muted">Seller Fee:</span>
+                            <span class="float-end">{{ .account.CommissionRates.Seller }}%</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Last Updated -->
+    <div class="d-flex justify-content-between align-items-center text-muted small">
+        <span>Last Updated</span>
+        <span>{{ .account.LastUpdated.Format "2006-01-02 15:04:05" }}</span>
     </div>
 </div>
 {{ end }} 
