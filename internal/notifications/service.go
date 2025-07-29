@@ -36,6 +36,7 @@ func (s *Service) SendAlert(data *NotificationData) error {
 		NewEmailStrategy(s.config),
 		NewTelegramStrategy(s.config),
 		NewWebPushStrategy(s.config, s.db),
+		NewWhatsAppStrategy(s.config),
 	}
 	manager := NewNotificationManager(strategies...)
 	return manager.SendAlert(data)

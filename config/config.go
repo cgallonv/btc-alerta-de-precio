@@ -33,6 +33,7 @@ type Config struct {
 	EnableEmailNotifications    bool
 	EnableWebPushNotifications  bool
 	EnableTelegramNotifications bool
+	EnableWhatsAppNotifications bool
 
 	// Telegram Bot
 	TelegramBotToken string
@@ -42,6 +43,13 @@ type Config struct {
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
 	VAPIDSubject    string
+
+	// WhatsApp Business API (Meta)
+	WhatsAppAccessToken    string
+	WhatsAppPhoneNumberID  string
+	WhatsAppBusinessAccID  string
+	WhatsAppTemplateNameES string
+	WhatsAppTemplateNameEN string
 }
 
 func Load() (*Config, error) {
@@ -69,6 +77,7 @@ func Load() (*Config, error) {
 		EnableEmailNotifications:    getEnvBool("ENABLE_EMAIL_NOTIFICATIONS", true),
 		EnableWebPushNotifications:  getEnvBool("ENABLE_WEB_PUSH_NOTIFICATIONS", true),
 		EnableTelegramNotifications: getEnvBool("ENABLE_TELEGRAM_NOTIFICATIONS", false),
+		EnableWhatsAppNotifications: getEnvBool("ENABLE_WHATSAPP_NOTIFICATIONS", false),
 
 		// Telegram Bot configuration
 		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", ""),
@@ -78,6 +87,13 @@ func Load() (*Config, error) {
 		VAPIDPublicKey:  getEnv("VAPID_PUBLIC_KEY", ""),
 		VAPIDPrivateKey: getEnv("VAPID_PRIVATE_KEY", ""),
 		VAPIDSubject:    getEnv("VAPID_SUBJECT", "mailto:admin@btcalerts.com"),
+
+		// WhatsApp Business API configuration
+		WhatsAppAccessToken:    getEnv("WHATSAPP_ACCESS_TOKEN", ""),
+		WhatsAppPhoneNumberID:  getEnv("WHATSAPP_PHONE_NUMBER_ID", ""),
+		WhatsAppBusinessAccID:  getEnv("WHATSAPP_BUSINESS_ACCOUNT_ID", ""),
+		WhatsAppTemplateNameES: getEnv("WHATSAPP_TEMPLATE_NAME_ES", "btc_alert_es"),
+		WhatsAppTemplateNameEN: getEnv("WHATSAPP_TEMPLATE_NAME_EN", "btc_alert_en"),
 	}, nil
 }
 

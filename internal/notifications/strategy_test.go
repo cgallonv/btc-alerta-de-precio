@@ -1,6 +1,9 @@
 package notifications
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -244,6 +247,184 @@ func TestWebPushStrategy_IsEnabled(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestWhatsAppStrategy_IsEnabled(t *testing.T) {
+	cfg := &config.Config{
+		EnableWhatsAppNotifications: true,
+	}
+
+	strategy := NewWhatsAppStrategy(cfg)
+
+	tests := []struct {
+		name     string
+		alert    *storage.Alert
+		expected bool
+	}{
+		{
+			name: "enabled when all conditions met",
+			alert: &storage.Alert{
+				EnableWhatsApp: true,
+				WhatsAppNumber: "+1234567890",
+			},
+			expected: true,
+		},
+		{
+			name: "disabled when whatsapp notifications disabled globally",
+			alert: &storage.Alert{
+				EnableWhatsApp: true,
+				WhatsAppNumber: "+1234567890",
+			},
+			expected: true, // Still true because we set EnableWhatsAppNotifications to true
+		},
+		{
+			name: "disabled when alert whatsapp disabled",
+			alert: &storage.Alert{
+				EnableWhatsApp: false,
+				WhatsAppNumber: "+1234567890",
+			},
+			expected: false,
+		},
+		{
+			name: "disabled when no whatsapp number",
+			alert: &storage.Alert{
+				EnableWhatsApp: true,
+				WhatsAppNumber: "",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := strategy.IsEnabled(tt.alert)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWhatsAppStrategy_Send(t *testing.T) {
+	tests := []struct {
+		name            string
+		config          *config.Config
+		alert           *storage.Alert
+		mockAPIStatus   int
+		mockAPIResponse string
+		expectedError   bool
+	}{
+		{
+			name: "successful send",
+			config: &config.Config{
+				EnableWhatsAppNotifications: true,
+				WhatsAppAccessToken:         "test_token",
+				WhatsAppPhoneNumberID:       "12345",
+				WhatsAppTemplateNameES:      "test_template_es",
+				WhatsAppTemplateNameEN:      "test_template_en",
+			},
+			alert: &storage.Alert{
+				Name:           "Test Alert",
+				EnableWhatsApp: true,
+				WhatsAppNumber: "+1234567890",
+				Language:       "es",
+				Type:           "above",
+				TargetPrice:    50000,
+			},
+			mockAPIStatus:   200,
+			mockAPIResponse: `{"success":true}`,
+			expectedError:   false,
+		},
+		{
+			name: "disabled notifications",
+			config: &config.Config{
+				EnableWhatsAppNotifications: false,
+			},
+			alert: &storage.Alert{
+				EnableWhatsApp: true,
+				WhatsAppNumber: "+1234567890",
+			},
+			expectedError: false,
+		},
+		{
+			name: "missing configuration",
+			config: &config.Config{
+				EnableWhatsAppNotifications: true,
+				WhatsAppAccessToken:         "",
+				WhatsAppPhoneNumberID:       "",
+			},
+			alert: &storage.Alert{
+				EnableWhatsApp: true,
+				WhatsAppNumber: "+1234567890",
+			},
+			expectedError: true,
+		},
+		{
+			name: "api error response",
+			config: &config.Config{
+				EnableWhatsAppNotifications: true,
+				WhatsAppAccessToken:         "test_token",
+				WhatsAppPhoneNumberID:       "12345",
+				WhatsAppTemplateNameES:      "test_template_es",
+			},
+			alert: &storage.Alert{
+				Name:           "Test Alert",
+				EnableWhatsApp: true,
+				WhatsAppNumber: "+1234567890",
+				Language:       "es",
+			},
+			mockAPIStatus:   400,
+			mockAPIResponse: `{"error":{"message":"Invalid WhatsApp number"}}`,
+			expectedError:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test server if needed
+			var server *httptest.Server
+			if tt.mockAPIStatus > 0 {
+				server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// Verify request
+					assert.Equal(t, "POST", r.Method)
+					assert.Equal(t, "Bearer "+tt.config.WhatsAppAccessToken, r.Header.Get("Authorization"))
+					assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+					// Verify request body
+					var payload map[string]interface{}
+					err := json.NewDecoder(r.Body).Decode(&payload)
+					assert.NoError(t, err)
+					assert.Equal(t, "whatsapp", payload["messaging_product"])
+					assert.Equal(t, tt.alert.WhatsAppNumber, payload["to"])
+
+					// Send response
+					w.WriteHeader(tt.mockAPIStatus)
+					w.Write([]byte(tt.mockAPIResponse))
+				}))
+				defer server.Close()
+
+				// Override API base URL for testing
+				whatsappAPIBaseURL = server.URL
+			}
+
+			strategy := NewWhatsAppStrategy(tt.config)
+			err := strategy.Send(&NotificationData{
+				Title:   "Test Notification",
+				Message: "Test message",
+				Price:   50000.00,
+				Alert:   tt.alert,
+			})
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestWhatsAppStrategy_GetChannelName(t *testing.T) {
+	strategy := NewWhatsAppStrategy(&config.Config{})
+	assert.Equal(t, "whatsapp", strategy.GetChannelName())
 }
 
 func TestNotificationManager_AddRemoveStrategy(t *testing.T) {

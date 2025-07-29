@@ -231,6 +231,33 @@
                                         <i class="fas fa-globe text-warning"></i> Notificación Web Push (Chrome)
                                     </label>
                                 </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableWhatsApp">
+                                    <label class="form-check-label">
+                                        <i class="fab fa-whatsapp text-success"></i> Notificación por WhatsApp
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3" id="whatsAppGroup" style="display: none;">
+                                <label class="form-label">
+                                    <i class="fab fa-whatsapp"></i> Número de WhatsApp
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">+</span>
+                                    <input type="tel" class="form-control" id="whatsAppNumber" 
+                                           placeholder="1234567890" pattern="[0-9]+"
+                                           title="Ingresa solo números, sin espacios ni símbolos">
+                                </div>
+                                <div class="form-text">
+                                    Formato internacional sin '+' (ej: 573001234567 para Colombia)
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Idioma de las Notificaciones</label>
+                                <select class="form-control" id="language">
+                                    <option value="es">Español</option>
+                                    <option value="en">English</option>
+                                </select>
                             </div>
                             <button type="submit" class="btn btn-primary w-100">
                                 <i class="fas fa-bell"></i> Crear Alerta
@@ -286,6 +313,54 @@
                             <div class="form-text" id="editValueHelp">
                                 Ingresa el nuevo valor para la alerta
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tipos de Notificación</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editEnableEmail">
+                                <label class="form-check-label">
+                                    <i class="fas fa-envelope text-primary"></i> Email
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editEnableTelegram">
+                                <label class="form-check-label">
+                                    <i class="fab fa-telegram text-info"></i> Telegram
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editEnableWebPush">
+                                <label class="form-check-label">
+                                    <i class="fas fa-globe text-warning"></i> Web Push
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editEnableWhatsApp">
+                                <label class="form-check-label">
+                                    <i class="fab fa-whatsapp text-success"></i> WhatsApp
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="editWhatsAppGroup" style="display: none;">
+                            <label class="form-label">
+                                <i class="fab fa-whatsapp"></i> Número de WhatsApp
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">+</span>
+                                <input type="tel" class="form-control" id="editWhatsAppNumber" 
+                                       placeholder="1234567890" pattern="[0-9]+"
+                                       title="Ingresa solo números, sin espacios ni símbolos">
+                            </div>
+                            <div class="form-text">
+                                Formato internacional sin '+' (ej: 573001234567 para Colombia)
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Idioma de las Notificaciones</label>
+                            <select class="form-control" id="editLanguage">
+                                <option value="es">Español</option>
+                                <option value="en">English</option>
+                            </select>
                         </div>
                         <input type="hidden" id="editAlertId">
                         <input type="hidden" id="editAlertType">

@@ -57,6 +57,16 @@ function setupEventListeners() {
     document.getElementById('alertType').addEventListener('change', function() {
         toggleAlertFields(this.value);
     });
+
+    // Toggle WhatsApp number field
+    document.getElementById('enableWhatsApp').addEventListener('change', function() {
+        const whatsAppGroup = document.getElementById('whatsAppGroup');
+        whatsAppGroup.style.display = this.checked ? 'block' : 'none';
+        
+        // Make WhatsApp number required if WhatsApp is enabled
+        const whatsAppNumber = document.getElementById('whatsAppNumber');
+        whatsAppNumber.required = this.checked;
+    });
 }
 
 function toggleAlertFields(alertType) {
@@ -428,6 +438,10 @@ function displayAlerts(alerts) {
                         </p>
                         <small class="text-muted">
                             <i class="fas fa-envelope"></i> ${alert.email}
+                            ${alert.whatsapp_number ? 
+                                `• <i class="fab fa-whatsapp"></i> +${alert.whatsapp_number}` : 
+                                ''
+                            }
                             ${alert.last_triggered ? 
                                 `• Última activación: ${new Date(alert.last_triggered).toLocaleString('es-ES')}` : 
                                 '• Nunca activada'
@@ -443,6 +457,9 @@ function displayAlerts(alerts) {
                             }
                             ${alert.enable_web_push ? 
                                 '<span class="badge bg-warning me-1"><i class="fas fa-globe"></i> Web Push</span>' : ''
+                            }
+                            ${alert.enable_whatsapp ? 
+                                '<span class="badge bg-success me-1"><i class="fab fa-whatsapp"></i> WhatsApp</span>' : ''
                             }
                         </div>
                         ${alert.trigger_count > 0 ? 
@@ -508,6 +525,9 @@ async function createAlert(event) {
         enable_email: document.getElementById('enableEmail').checked,
         enable_telegram: document.getElementById('enableTelegram').checked,
         enable_web_push: document.getElementById('enableWebPush').checked,
+        enable_whatsapp: document.getElementById('enableWhatsApp').checked,
+        whatsapp_number: document.getElementById('whatsAppNumber').value,
+        language: document.getElementById('language').value,
         is_active: true
     };
     
@@ -515,6 +535,12 @@ async function createAlert(event) {
         alertData.percentage = parseFloat(document.getElementById('percentage').value);
     } else {
         alertData.target_price = parseFloat(document.getElementById('targetPrice').value);
+    }
+
+    // Validar número de WhatsApp si está habilitado
+    if (alertData.enable_whatsapp && !alertData.whatsapp_number) {
+        showNotification('Por favor ingresa un número de WhatsApp válido', 'warning');
+        return;
     }
     
     try {
@@ -595,10 +621,28 @@ async function editAlert(alertId) {
             editValueInput.min = '0.1';
             editValueInput.max = '100';
         }
+
+        // Configurar opciones de notificación
+        document.getElementById('editEnableEmail').checked = alert.enable_email;
+        document.getElementById('editEnableTelegram').checked = alert.enable_telegram;
+        document.getElementById('editEnableWebPush').checked = alert.enable_web_push;
+        document.getElementById('editEnableWhatsApp').checked = alert.enable_whatsapp;
+        document.getElementById('editWhatsAppNumber').value = alert.whatsapp_number || '';
+        document.getElementById('editLanguage').value = alert.language || 'es';
+
+        // Mostrar/ocultar campo de WhatsApp
+        const editWhatsAppGroup = document.getElementById('editWhatsAppGroup');
+        editWhatsAppGroup.style.display = alert.enable_whatsapp ? 'block' : 'none';
         
         // Mostrar modal
         const modal = new bootstrap.Modal(document.getElementById('editAlertModal'));
         modal.show();
+
+        // Configurar evento para toggle de WhatsApp
+        document.getElementById('editEnableWhatsApp').addEventListener('change', function() {
+            editWhatsAppGroup.style.display = this.checked ? 'block' : 'none';
+            document.getElementById('editWhatsAppNumber').required = this.checked;
+        });
         
     } catch (error) {
         console.error('Error loading alert for editing:', error);
@@ -616,9 +660,24 @@ async function saveEditAlert() {
         showNotification('Por favor ingresa un valor válido', 'error');
         return;
     }
+
+    // Validar número de WhatsApp si está habilitado
+    const enableWhatsApp = document.getElementById('editEnableWhatsApp').checked;
+    const whatsAppNumber = document.getElementById('editWhatsAppNumber').value;
+    if (enableWhatsApp && !whatsAppNumber) {
+        showNotification('Por favor ingresa un número de WhatsApp válido', 'warning');
+        return;
+    }
     
     try {
-        const updateData = {};
+        const updateData = {
+            enable_email: document.getElementById('editEnableEmail').checked,
+            enable_telegram: document.getElementById('editEnableTelegram').checked,
+            enable_web_push: document.getElementById('editEnableWebPush').checked,
+            enable_whatsapp: enableWhatsApp,
+            whatsapp_number: whatsAppNumber,
+            language: document.getElementById('editLanguage').value
+        };
         
         if (alertType === 'above' || alertType === 'below') {
             updateData.target_price = newValue;
