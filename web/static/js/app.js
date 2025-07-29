@@ -100,8 +100,12 @@ function initializeApp() {
     }
     
     loadCurrentPrice();
-    loadAlerts();
     loadPriceHistory();
+    
+    // Solo cargar alertas si estamos en la página de alertas
+    if (document.getElementById('alertsList')) {
+        loadAlerts();
+    }
 }
 
 // Cargar configuración desde el backend
@@ -125,34 +129,37 @@ async function loadConfig() {
 }
 
 function setupEventListeners() {
-    // Form de alertas (solo en página de alertas)
-    const alertForm = document.getElementById('alertForm');
-    if (alertForm) {
-        alertForm.addEventListener('submit', createAlert);
-        
-        // Cambio de tipo de alerta
-        const alertType = document.getElementById('alertType');
-        if (alertType) {
-            alertType.addEventListener('change', function() {
-                toggleAlertFields(this.value);
-            });
-        }
+    // Solo configurar listeners de alertas si estamos en la página de alertas
+    if (document.getElementById('alertsList')) {
+        // Form de alertas (solo en página de alertas)
+        const alertForm = document.getElementById('alertForm');
+        if (alertForm) {
+            alertForm.addEventListener('submit', createAlert);
+            
+            // Cambio de tipo de alerta
+            const alertType = document.getElementById('alertType');
+            if (alertType) {
+                alertType.addEventListener('change', function() {
+                    toggleAlertFields(this.value);
+                });
+            }
 
-        // Toggle WhatsApp number field
-        const enableWhatsApp = document.getElementById('enableWhatsApp');
-        if (enableWhatsApp) {
-            enableWhatsApp.addEventListener('change', function() {
-                const whatsAppGroup = document.getElementById('whatsAppGroup');
-                if (whatsAppGroup) {
-                    whatsAppGroup.style.display = this.checked ? 'block' : 'none';
-                    
-                    // Make WhatsApp number required if WhatsApp is enabled
-                    const whatsAppNumber = document.getElementById('whatsAppNumber');
-                    if (whatsAppNumber) {
-                        whatsAppNumber.required = this.checked;
+            // Toggle WhatsApp number field
+            const enableWhatsApp = document.getElementById('enableWhatsApp');
+            if (enableWhatsApp) {
+                enableWhatsApp.addEventListener('change', function() {
+                    const whatsAppGroup = document.getElementById('whatsAppGroup');
+                    if (whatsAppGroup) {
+                        whatsAppGroup.style.display = this.checked ? 'block' : 'none';
+                        
+                        // Make WhatsApp number required if WhatsApp is enabled
+                        const whatsAppNumber = document.getElementById('whatsAppNumber');
+                        if (whatsAppNumber) {
+                            whatsAppNumber.required = this.checked;
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 }
@@ -233,11 +240,10 @@ async function apiCall(endpoint, options = {}) {
 // Cargar precio actual
 async function loadCurrentPrice() {
     try {
-        // Mostrar indicador de carga
         const priceElement = document.getElementById('currentPrice');
         const updateElement = document.getElementById('lastUpdate');
-        
-        // Añadir efecto de pulsación para mostrar actualización
+        if (!priceElement || !updateElement) return;
+        // Mostrar indicador de carga
         priceElement.style.opacity = '0.7';
         
         const response = await apiCall('/price');
@@ -419,7 +425,9 @@ async function loadPriceHistory() {
 
 // Actualizar gráfico de precios
 function updatePriceChart(priceData) {
-    const ctx = document.getElementById('priceChart').getContext('2d');
+    const priceChartElement = document.getElementById('priceChart');
+    if (!priceChartElement) return;
+    const ctx = priceChartElement.getContext('2d');
     
     if (priceChart) {
         priceChart.destroy();
