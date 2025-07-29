@@ -198,3 +198,23 @@ MIT License - Ver [LICENSE](LICENSE) para detalles.
 ---
 
 **⚠️ Disclaimer**: Solo para fines informativos. No constituye asesoramiento financiero.
+
+## Notificaciones Soportadas
+
+El sistema soporta múltiples canales de notificación:
+
+1. **Email**: Notificaciones por correo electrónico (requiere configuración SMTP)
+2. **Telegram**: Alertas vía bot de Telegram (ver [TELEGRAM_SETUP.md](TELEGRAM_SETUP.md))
+3. **Web Push**: Notificaciones en el navegador (Chrome)
+4. **WhatsApp**: Mensajes vía WhatsApp Business API (ver [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md))
+
+### Configuración de Notificaciones
+
+Cada tipo de notificación requiere su propia configuración:
+
+- **Email**: Configura las variables SMTP en `.env`
+- **Telegram**: Sigue la guía en [TELEGRAM_SETUP.md](TELEGRAM_SETUP.md)
+- **Web Push**: Se configura automáticamente al activar en el navegador
+- **WhatsApp**: 
+  - Guía rápida en [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md)
+  - Guía detallada de Meta Developer en [docs/META_APP_SETUP.md](docs/META_APP_SETUP.md)

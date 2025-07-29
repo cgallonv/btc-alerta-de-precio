@@ -22,6 +22,11 @@ type Alert struct {
 	EnableEmail    bool `json:"enable_email" gorm:"default:true"`
 	EnableWebPush  bool `json:"enable_web_push" gorm:"default:false"`
 	EnableTelegram bool `json:"enable_telegram" gorm:"default:false"`
+	EnableWhatsApp bool `json:"enable_whatsapp" gorm:"default:false"`
+
+	// WhatsApp configuration
+	WhatsAppNumber string `json:"whatsapp_number" gorm:"size:20"` // International format: +1234567890
+	Language       string `json:"language" gorm:"default:'es'"`   // 'es' or 'en' for template selection
 
 	// Tracking de activaciones
 	LastTriggered *time.Time `json:"last_triggered"`
