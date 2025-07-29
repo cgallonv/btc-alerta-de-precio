@@ -88,7 +88,6 @@ func NewHandler(alertService interfaces.AlertService, configProvider interfaces.
 func (h *Handler) SetupRoutes(router *gin.Engine) {
 	// Static files
 	router.Static("/static", "./web/static")
-	router.StaticFile("/sw.js", "./web/sw.js") // Serve service worker at root
 
 	// Load templates in the correct order
 	templ := template.New("")
@@ -144,11 +143,10 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		// Stats
 		api.GET("/stats", h.getStats)
 
-		// Web Push Subscriptions
-		api.POST("/webpush/subscribe", h.subscribeWebPush)
-		api.DELETE("/webpush/unsubscribe", h.unsubscribeWebPush)
-		api.GET("/webpush/vapid-public-key", h.getVAPIDPublicKey)
+		// Config
 		api.GET("/config", h.getConfig)
+
+		// Development utilities
 		api.POST("/preload-alerts", h.preloadAlerts)      // 🆕 Endpoint para precargar alertas
 		api.POST("/delete-all-alerts", h.deleteAllAlerts) // 🆕 Endpoint para eliminar todas las alertas
 	}
@@ -577,102 +575,6 @@ func (h *Handler) healthCheck(c *gin.Context) {
 		Data: gin.H{
 			"status":     "ok",
 			"monitoring": h.alertService.IsMonitoring(),
-		},
-	})
-}
-
-// Web Push handlers
-// subscribeWebPush handles POST /api/v1/webpush/subscribe and saves a new Web Push subscription.
-func (h *Handler) subscribeWebPush(c *gin.Context) {
-	var req struct {
-		Endpoint string `json:"endpoint" binding:"required"`
-		P256dh   string `json:"p256dh" binding:"required"`
-		Auth     string `json:"auth" binding:"required"`
-		UserID   string `json:"user_id"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			Success: false,
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	subscription := &storage.WebPushSubscription{
-		Endpoint: req.Endpoint,
-		P256dh:   req.P256dh,
-		Auth:     req.Auth,
-		UserID:   req.UserID,
-		IsActive: true,
-	}
-
-	db, err := storage.NewDatabase("alerts.db") // TODO: Usar configuración
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Error:   "Database connection failed",
-		})
-		return
-	}
-
-	if err := db.SaveWebPushSubscription(subscription); err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Message: "Web Push subscription saved successfully",
-	})
-}
-
-// unsubscribeWebPush handles DELETE /api/v1/webpush/unsubscribe and removes a Web Push subscription.
-func (h *Handler) unsubscribeWebPush(c *gin.Context) {
-	var req struct {
-		Endpoint string `json:"endpoint" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			Success: false,
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	db, err := storage.NewDatabase("alerts.db") // TODO: Usar configuración
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Error:   "Database connection failed",
-		})
-		return
-	}
-
-	if err := db.RemoveWebPushSubscription(req.Endpoint); err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Error:   err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Message: "Web Push subscription removed successfully",
-	})
-}
-
-// getVAPIDPublicKey handles GET /api/v1/webpush/vapid-public-key and returns the VAPID public key for Web Push.
-func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Data: gin.H{
-			"publicKey": h.configProvider.GetVAPIDPublicKey(),
 		},
 	})
 }
