@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -46,24 +47,30 @@ func NewHandler(alertService interfaces.AlertService, configProvider interfaces.
 //	handler := NewHandler(...)
 //	handler.SetupRoutes(router)
 func (h *Handler) SetupRoutes(router *gin.Engine) {
-	// Servir archivos estáticos
+	// Static files
 	router.Static("/static", "./web/static")
 	router.StaticFile("/sw.js", "./web/sw.js") // Serve service worker at root
 
-	// Load templates programmatically
+	// Load templates in the correct order
 	templ := template.New("")
-	templ = template.Must(templ.ParseFiles(
-		"web/templates/index.html",
-		"web/templates/alerts.html",
-		"web/templates/partials/edit_alert_modal.html",
-		"web/templates/partials/hamburger_menu.html",
+	var err error
+	templ, err = templ.ParseFiles(
+		"web/templates/layout.html",
 		"web/templates/partials/top_bar.html",
+		"web/templates/partials/hamburger_menu.html",
+		"web/templates/partials/edit_alert_modal.html",
 		"web/templates/partials/alerts_form.html",
 		"web/templates/partials/alerts_list.html",
-	))
+		"web/templates/index.html",
+		"web/templates/alerts.html",
+	)
+	if err != nil {
+		log.Printf("Error parsing templates: %v", err)
+		return
+	}
 	router.SetHTMLTemplate(templ)
 
-	// Página principal
+	// Routes
 	router.GET("/", h.indexPage)
 	router.GET("/alerts", h.alertsPage)
 
@@ -105,20 +112,48 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 // indexPage renders the dashboard page.
 // Route: GET /
 func (h *Handler) indexPage(c *gin.Context) {
-	stats, _ := h.alertService.GetStats()
-	c.HTML(http.StatusOK, "index.html", gin.H{
-		"stats":       stats,
-		"CurrentPage": "dashboard",
-		"Version":     time.Now().Unix(), // Add timestamp as version
+	stats, err := h.alertService.GetStats()
+	if err != nil {
+		log.Printf("Error getting stats: %v", err)
+		c.HTML(http.StatusInternalServerError, "layout", gin.H{
+			"error":     "Error loading stats",
+			"PageTitle": "Dashboard",
+			"Version":   time.Now().Unix(),
+			"content":   "index",
+		})
+		return
+	}
+
+	log.Printf("Rendering index page with stats: %+v", stats)
+	c.HTML(http.StatusOK, "layout", gin.H{
+		"stats":     stats,
+		"PageTitle": "Dashboard",
+		"Version":   time.Now().Unix(),
+		"content":   "index",
 	})
 }
 
 // alertsPage renders the alerts management page.
 // Route: GET /alerts
 func (h *Handler) alertsPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "alerts.html", gin.H{
-		"CurrentPage": "alerts",
-		"Version":     time.Now().Unix(), // Add timestamp as version
+	alerts, err := h.alertService.GetAlerts()
+	if err != nil {
+		log.Printf("Error getting alerts: %v", err)
+		c.HTML(http.StatusInternalServerError, "layout", gin.H{
+			"error":     "Error loading alerts",
+			"PageTitle": "Alertas",
+			"Version":   time.Now().Unix(),
+			"content":   "alerts",
+		})
+		return
+	}
+
+	log.Printf("Rendering alerts page with %d alerts", len(alerts))
+	c.HTML(http.StatusOK, "layout", gin.H{
+		"alerts":    alerts,
+		"PageTitle": "Alertas",
+		"Version":   time.Now().Unix(),
+		"content":   "alerts",
 	})
 }
 

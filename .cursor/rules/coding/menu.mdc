@@ -6,192 +6,405 @@ This document outlines the standardized process for adding new menus and main fe
 ## Template Structure
 1. **Base Layout (`layout.html`)**
    ```html
-   {{ block "title" . }}Default Title{{ end }}
-   {{ block "content" . }}{{ end }}
-   {{ block "scripts" . }}{{ end }}
+   <!DOCTYPE html>
+   <html lang="es">
+   <head>
+       <meta charset="UTF-8">
+       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       <title>Bitcoin Price Alert - {{.PageTitle}}</title>
+       <!-- Common CSS -->
+   </head>
+   <body>
+       {{ template "top_bar" . }}
+       {{ template "hamburger_menu" . }}
+       <main class="main-content">
+           {{ if eq .content "feature_name" }}
+               {{ template "feature_name_content" . }}
+           {{ end }}
+       </main>
+       <!-- Common Scripts -->
+   </body>
+   </html>
    ```
 
-2. **Page Template Structure**
+2. **Feature Template Structure (`feature_name.html`)**
    ```html
-   {{ define "title" }}Feature Name - Bitcoin Price Alert{{ end }}
-   {{ define "content" }}
-     <!-- Feature content -->
-   {{ end }}
-   {{ define "scripts" }}
-     <!-- Feature-specific scripts -->
+   {{ define "feature_name_content" }}
+   <div class="container mt-4">
+       <!-- Feature-specific content -->
+   </div>
    {{ end }}
    ```
 
 ## Component Organization
-1. **Partials Location**
-   - Place reusable components in `web/templates/partials/`
-   - Name format: `feature_component.html` (e.g., `account_summary.html`)
+1. **Template Naming Convention**
+   - Main content template: `feature_name_content`
+   - Partial components: `feature_name_component`
+   - Example: `alerts_content`, `alerts_form`, `alerts_list`
 
-2. **JavaScript Organization**
-   - Place feature-specific JS in `web/static/js/feature.js`
-   - Use IIFE pattern for scoped functionality
-   ```javascript
-   (function() {
-     // Feature-specific code
-   })();
+2. **File Structure**
+   ```
+   web/
+     templates/
+       feature_name.html           # Main template
+       partials/
+         feature_name_component.html
+     static/
+       js/
+         feature_name.js
    ```
 
 ## Adding a New Menu Item
-1. **Update Hamburger Menu**
+
+1. **Update Layout Template**
    ```html
-   <a href="/feature" class="side-menu-item">
-     <i class="fas fa-icon"></i> Feature Name
-   </a>
+   <!-- In layout.html -->
+   <main class="main-content">
+       {{ if eq .content "feature_name" }}
+           {{ template "feature_name_content" . }}
+       {{ end }}
+   </main>
    ```
 
-2. **Add Route Handler**
+2. **Create Feature Template**
+   ```html
+   <!-- web/templates/feature_name.html -->
+   {{ define "feature_name_content" }}
+   <div class="container mt-4">
+       <!-- Feature content -->
+   </div>
+   {{ end }}
+   ```
+
+3. **Update Handler**
    ```go
-   func (h *Handler) featurePage(c *gin.Context) {
-     c.HTML(http.StatusOK, "layout.html", gin.H{
-       "Version": time.Now().Unix(),
-       "CurrentPage": "feature",
-     })
+   func (h *Handler) featureNamePage(c *gin.Context) {
+       c.HTML(http.StatusOK, "layout", gin.H{
+           "PageTitle": "Feature Name",
+           "Version":   time.Now().Unix(),
+           "content":   "feature_name",
+           // Feature-specific data
+       })
    }
    ```
 
-3. **Register Templates**
+4. **Register Route and Templates**
    ```go
-   router.LoadHTMLFiles(
-     // ... existing templates ...
-     "web/templates/feature.html",
-     "web/templates/partials/feature_component.html",
+   // In SetupRoutes
+   router.GET("/feature-name", h.featureNamePage)
+
+   // Load templates in order
+   templ, err = templ.ParseFiles(
+       "web/templates/layout.html",
+       "web/templates/partials/top_bar.html",
+       "web/templates/partials/hamburger_menu.html",
+       "web/templates/feature_name.html",
+       "web/templates/partials/feature_name_component.html",
    )
    ```
 
 ## Feature Implementation Checklist
-1. **Frontend Structure**
-   - [ ] Create main template extending base layout
-   - [ ] Break into logical partials if needed
-   - [ ] Add feature-specific styles to `styles.css`
-   - [ ] Create feature-specific JavaScript file
+1. **Template Setup**
+   - [ ] Create main template with `feature_name_content` definition
+   - [ ] Add feature condition to layout.html
+   - [ ] Create necessary partial components
+   - [ ] Update template registration in handler
 
-2. **Backend Structure**
-   - [ ] Add route handler in `handlers.go`
-   - [ ] Define necessary API endpoints
-   - [ ] Create interfaces in `interfaces/`
-   - [ ] Implement services in `adapters/`
+2. **Route and Handler**
+   - [ ] Add page handler with proper content identifier
+   - [ ] Register route in SetupRoutes
+   - [ ] Implement necessary API endpoints
+   - [ ] Add proper error handling
 
-3. **Data Flow**
-   - [ ] Define data models
-   - [ ] Implement repository layer if needed
-   - [ ] Add API endpoints for data operations
-   - [ ] Implement frontend data fetching
+3. **Frontend Assets**
+   - [ ] Add feature-specific JavaScript
+   - [ ] Add feature-specific styles
+   - [ ] Update menu items
+   - [ ] Add loading states
 
 4. **Testing**
-   - [ ] Add handler tests
-   - [ ] Add service/adapter tests
-   - [ ] Add frontend component tests
+   - [ ] Test template rendering
+   - [ ] Test API endpoints
    - [ ] Test responsive design
+   - [ ] Test error states
 
-## Example: Adding Account Overview Feature
+## Example: Adding Settings Feature
 
-1. **File Structure**
-   ```
-   web/
-     templates/
-       account.html              # Main template
-       partials/
-         account_summary.html    # Balance component
-         account_assets.html     # Assets list component
-     static/
-       js/
-         account.js             # Account-specific logic
-   internal/
-     api/
-       handlers.go              # Account routes
-     interfaces/
-       account_service.go       # Account interfaces
-     adapters/
-       account_service.go       # Service implementation
+1. **Template Structure**
+   ```html
+   <!-- web/templates/settings.html -->
+   {{ define "settings_content" }}
+   <div class="container mt-4">
+       <div class="row">
+           <div class="col-md-4">
+               {{ template "settings_menu" . }}
+           </div>
+           <div class="col-md-8">
+               {{ template "settings_form" . }}
+           </div>
+       </div>
+   </div>
+   {{ end }}
    ```
 
 2. **Handler Implementation**
    ```go
-   func (h *Handler) accountPage(c *gin.Context) {
-     c.HTML(http.StatusOK, "layout.html", gin.H{
-       "Version": time.Now().Unix(),
-       "CurrentPage": "account",
-     })
+   func (h *Handler) settingsPage(c *gin.Context) {
+       c.HTML(http.StatusOK, "layout", gin.H{
+           "PageTitle": "Settings",
+           "Version":   time.Now().Unix(),
+           "content":   "settings",
+           "config":    h.configProvider.GetConfig(),
+       })
    }
    ```
 
-3. **Template Example**
-   ```html
-   {{ define "title" }}Account - Bitcoin Price Alert{{ end }}
-   {{ define "content" }}
-     {{ template "partials/account_summary" . }}
-     {{ template "partials/account_assets" . }}
-   {{ end }}
+3. **Route Registration**
+   ```go
+   // In SetupRoutes
+   router.GET("/settings", h.settingsPage)
+   
+   // Template registration
+   templ, err = templ.ParseFiles(
+       // ... existing templates ...
+       "web/templates/settings.html",
+       "web/templates/partials/settings_menu.html",
+       "web/templates/partials/settings_form.html",
+   )
    ```
 
-4. **JavaScript Pattern**
-   ```javascript
-   // account.js
-   (function() {
-     const state = {
-       balances: null,
-       assets: null
-     };
+## Handler Implementation Guide
 
-     async function initialize() {
-       await Promise.all([
-         loadBalances(),
-         loadAssets()
-       ]);
-     }
+1. **Handler Structure**
+   ```go
+   // Add to the top of handlers.go if needed
+   type FeatureData struct {
+       // Feature-specific fields
+   }
 
-     document.addEventListener('DOMContentLoaded', initialize);
-   })();
+   // Add handler method
+   func (h *Handler) featureNamePage(c *gin.Context) {
+       // 1. Get any required data
+       data, err := h.someService.GetFeatureData()
+       if err != nil {
+           log.Printf("Error getting feature data: %v", err)
+           c.HTML(http.StatusInternalServerError, "layout", gin.H{
+               "error":     "Error loading feature data",
+               "PageTitle": "Feature Name",
+               "Version":   time.Now().Unix(),
+               "content":   "feature_name",
+           })
+           return
+       }
+
+       // 2. Render the page
+       c.HTML(http.StatusOK, "layout", gin.H{
+           "PageTitle": "Feature Name",
+           "Version":   time.Now().Unix(),
+           "content":   "feature_name",
+           "data":     data,
+       })
+   }
+   ```
+
+2. **Route Registration in SetupRoutes**
+   ```go
+   func (h *Handler) SetupRoutes(router *gin.Engine) {
+       // ... existing routes ...
+
+       // 1. Add page route
+       router.GET("/feature-name", h.featureNamePage)
+
+       // 2. If feature needs API endpoints, add them in the api group
+       api := router.Group("/api/v1")
+       {
+           // ... existing API routes ...
+
+           // Feature API endpoints
+           api.GET("/feature-name/data", h.getFeatureData)
+           api.POST("/feature-name/action", h.performFeatureAction)
+       }
+
+       // 3. Register templates in the correct order
+       templ := template.New("")
+       templ, err = templ.ParseFiles(
+           // Base templates first
+           "web/templates/layout.html",
+           "web/templates/partials/top_bar.html",
+           "web/templates/partials/hamburger_menu.html",
+           
+           // Feature templates
+           "web/templates/feature_name.html",
+           "web/templates/partials/feature_name_component.html",
+           
+           // Keep existing templates
+           "web/templates/index.html",
+           "web/templates/alerts.html",
+           // ... other existing templates ...
+       )
+   }
+   ```
+
+3. **API Endpoints Implementation**
+   ```go
+   func (h *Handler) getFeatureData(c *gin.Context) {
+       data, err := h.someService.GetFeatureData()
+       if err != nil {
+           c.JSON(http.StatusInternalServerError, Response{
+               Success: false,
+               Error:   err.Error(),
+           })
+           return
+       }
+
+       c.JSON(http.StatusOK, Response{
+           Success: true,
+           Data:    data,
+       })
+   }
+
+   func (h *Handler) performFeatureAction(c *gin.Context) {
+       var req FeatureRequest
+       if err := c.ShouldBindJSON(&req); err != nil {
+           c.JSON(http.StatusBadRequest, Response{
+               Success: false,
+               Error:   err.Error(),
+           })
+           return
+       }
+
+       result, err := h.someService.PerformAction(req)
+       if err != nil {
+           c.JSON(http.StatusInternalServerError, Response{
+               Success: false,
+               Error:   err.Error(),
+           })
+           return
+       }
+
+       c.JSON(http.StatusOK, Response{
+           Success: true,
+           Data:    result,
+           Message: "Action performed successfully",
+       })
+   }
+   ```
+
+4. **Handler Dependencies**
+   ```go
+   // 1. Add new service interface if needed
+   type FeatureService interface {
+       GetFeatureData() (*FeatureData, error)
+       PerformAction(req FeatureRequest) (*FeatureResult, error)
+   }
+
+   // 2. Update Handler struct if new dependencies needed
+   type Handler struct {
+       // ... existing fields ...
+       featureService FeatureService
+   }
+
+   // 3. Update NewHandler constructor
+   func NewHandler(
+       alertService interfaces.AlertService,
+       configProvider interfaces.ConfigProvider,
+       featureService FeatureService,
+   ) *Handler {
+       return &Handler{
+           alertService:   alertService,
+           configProvider: configProvider,
+           featureService: featureService,
+       }
+   }
+   ```
+
+5. **Error Handling Patterns**
+   ```go
+   func (h *Handler) featureNamePage(c *gin.Context) {
+       // Common error handling pattern for pages
+       data, err := h.someService.GetFeatureData()
+       if err != nil {
+           log.Printf("Error in featureNamePage: %v", err)
+           c.HTML(http.StatusInternalServerError, "layout", gin.H{
+               "error":     "Unable to load feature. Please try again later.",
+               "PageTitle": "Feature Name",
+               "Version":   time.Now().Unix(),
+               "content":   "feature_name",
+           })
+           return
+       }
+
+       // Success case
+       c.HTML(http.StatusOK, "layout", gin.H{
+           "PageTitle": "Feature Name",
+           "Version":   time.Now().Unix(),
+           "content":   "feature_name",
+           "data":     data,
+       })
+   }
+
+   func (h *Handler) apiEndpoint(c *gin.Context) {
+       // Common error handling pattern for API endpoints
+       result, err := h.someService.DoSomething()
+       if err != nil {
+           log.Printf("Error in apiEndpoint: %v", err)
+           c.JSON(http.StatusInternalServerError, Response{
+               Success: false,
+               Error:   "An unexpected error occurred",
+           })
+           return
+       }
+
+       c.JSON(http.StatusOK, Response{
+           Success: true,
+           Data:    result,
+       })
+   }
    ```
 
 ## Best Practices
-1. **Accessibility**
-   - Add ARIA labels to navigation items
-   - Ensure keyboard navigation works
-   - Maintain proper heading hierarchy
+1. **Template Organization**
+   - Use consistent naming: `feature_name_content` for main templates
+   - Keep partials in dedicated directory
+   - Follow component hierarchy
 
-2. **Performance**
-   - Lazy load feature-specific JS
-   - Use version query params for cache busting
-   - Implement loading states
+2. **Handler Structure**
+   - Use consistent content identifiers
+   - Pass all necessary data in handler
+   - Implement proper error handling
 
-3. **Error Handling**
+3. **Asset Management**
+   - Version static assets
+   - Organize feature-specific JS/CSS
+   - Implement proper caching
+
+4. **Error Handling**
    - Show user-friendly error messages
-   - Implement proper error boundaries
-   - Log errors appropriately
+   - Implement loading states
+   - Handle all edge cases
 
-4. **State Management**
-   - Use module pattern for feature-specific state
-   - Implement proper event handling
-   - Consider data refresh strategies
+## Review Checklist
+Before submitting:
+1. **Templates**
+   - [ ] Proper template naming
+   - [ ] Layout integration
+   - [ ] Error states handled
+   - [ ] Loading states implemented
 
-## Review Criteria
-Before submitting a new menu/feature:
-1. **Code Quality**
-   - Follows template structure
-   - Implements proper error handling
-   - Has necessary tests
-   - Uses consistent naming conventions
+2. **Routes**
+   - [ ] Handler implemented
+   - [ ] Routes registered
+   - [ ] Templates loaded
+   - [ ] Error handling complete
 
-2. **User Experience**
-   - Responsive design works
-   - Loading states implemented
-   - Error states handled gracefully
-   - Consistent with app style
+3. **Assets**
+   - [ ] JS/CSS organized
+   - [ ] Proper versioning
+   - [ ] Loading optimized
+   - [ ] Caching implemented
 
-3. **Performance**
-   - No unnecessary re-renders
-   - Proper resource loading
-   - Efficient API calls
-   - Caching strategy defined
-
-4. **Documentation**
-   - Updated API documentation
-   - Added usage examples
-   - Updated README if needed
-   - Added necessary comments
+4. **Testing**
+   - [ ] Templates tested
+   - [ ] Routes tested
+   - [ ] Error handling tested
+   - [ ] Responsive design verified

@@ -1,0 +1,94 @@
+/* Theme Colors */
+:root {
+    --bitcoin-primary: #f7931a;
+    --bitcoin-gradient: linear-gradient(45deg, #f7931a, #ffb347);
+    --success: #28a745;
+    --danger: #dc3545;
+    --neutral: #6c757d;
+}
+
+/* Layout Components */
+.bitcoin-color {
+    color: var(--bitcoin-primary);
+}
+
+.card-header {
+    background: var(--bitcoin-gradient);
+    color: white;
+}
+
+/* Price Display Components */
+.price-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    position: relative;
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
+}
+
+@media (max-width: 768px) {
+    .price-display {
+        font-size: 2rem;
+    }
+}
+
+.price-change {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-top: -8px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.price-change.positive { color: var(--success); }
+.price-change.negative { color: var(--danger); }
+.price-change.neutral { color: var(--neutral); }
+
+/* Alert Cards */
+.alert-card {
+    transition: transform 0.2s;
+}
+
+.alert-card:hover {
+    transform: translateY(-2px);
+}
+
+.status-active { color: var(--success); }
+.status-inactive { color: var(--danger); }
+
+/* Stats Cards */
+.stats-card {
+    transition: transform 0.2s ease;
+}
+
+.stats-updated {
+    transform: scale(1.05);
+}
+
+/* Animation Effects */
+.price-updating {
+    opacity: 0.7;
+    transform: scale(0.98);
+}
+
+.price-change-animation {
+    animation: priceChange 1s ease-out;
+}
+
+.updating {
+    animation: pulse 1s ease-in-out;
+}
+
+@keyframes priceChange {
+    0% { transform: translateY(0px) scale(1); opacity: 1; }
+    50% { transform: translateY(-10px) scale(1.2); opacity: 0.8; }
+    100% { transform: translateY(-20px) scale(1); opacity: 0; }
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+} 
