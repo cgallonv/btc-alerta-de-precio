@@ -1,0 +1,83 @@
+{{ define "top_bar" }}
+<!-- Connection Status -->
+<div class="connection-status">
+    <span id="connectionIndicator" class="badge bg-success online">
+        <i class="fas fa-wifi"></i> Conectado
+    </span>
+</div>
+
+<nav class="navbar navbar-expand-lg bg-bitcoin text-white mb-4">
+    <div class="container">
+        <a class="navbar-brand text-white" href="/">
+            <i class="fab fa-bitcoin"></i> Bitcoin Price Alert
+        </a>
+        <div class="navbar-nav ms-auto">
+            <span class="nav-text text-white me-3">
+                <i class="fas fa-chart-line"></i> Actualización cada <span id="updateInterval">15</span>s
+            </span>
+        </div>
+    </div>
+</nav>
+
+<style>
+    .navbar.bg-bitcoin {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1030;
+        background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        min-height: 56px;
+    }
+
+    body {
+        padding-top: 72px;
+    }
+
+    .connection-status {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 1031;
+        font-size: 0.8rem;
+    }
+
+    .connection-status .badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .online { 
+        background-color: #28a745 !important;
+        color: white !important;
+    }
+    
+    .offline { 
+        background-color: #dc3545 !important;
+        color: white !important;
+    }
+
+    @media (max-width: 768px) {
+        .connection-status {
+            top: 12px;
+            right: 12px;
+        }
+
+        .connection-status .badge {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+        }
+
+        .navbar-brand {
+            font-size: 1.1rem;
+        }
+
+        .nav-text {
+            font-size: 0.9rem;
+        }
+    }
+</style>
+{{ end }} 
