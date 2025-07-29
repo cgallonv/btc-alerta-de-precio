@@ -32,6 +32,45 @@ type AlertUpdateRequest struct {
 	Percentage  *float64 `json:"percentage,omitempty"`
 }
 
+// Add AccountData struct
+type AccountData struct {
+	TotalBalance     float64   `json:"total_balance"`
+	AvailableBalance float64   `json:"available_balance"`
+	LastUpdated      time.Time `json:"last_updated"`
+	Assets           []Asset   `json:"assets"`
+	Orders           []Order   `json:"orders"`
+	Budget           Budget    `json:"budget"`
+}
+
+type Asset struct {
+	Symbol    string  `json:"symbol"`
+	Amount    float64 `json:"amount"`
+	ValueUSD  float64 `json:"value_usd"`
+	Change24h float64 `json:"change_24h"`
+}
+
+type Order struct {
+	ID     string    `json:"id"`
+	Date   time.Time `json:"date"`
+	Type   string    `json:"type"`
+	Amount float64   `json:"amount"`
+	Price  float64   `json:"price"`
+	Status string    `json:"status"`
+}
+
+type Budget struct {
+	Used            float64    `json:"used"`
+	Limit           float64    `json:"limit"`
+	UsagePercentage float64    `json:"usage_percentage"`
+	Categories      []Category `json:"categories"`
+}
+
+type Category struct {
+	Name       string  `json:"name"`
+	Amount     float64 `json:"amount"`
+	Percentage float64 `json:"percentage"`
+}
+
 // NewHandler creates a new Handler with the given alert service and config provider.
 func NewHandler(alertService interfaces.AlertService, configProvider interfaces.ConfigProvider) *Handler {
 	return &Handler{
@@ -63,6 +102,11 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		"web/templates/partials/alerts_list.html",
 		"web/templates/index.html",
 		"web/templates/alerts.html",
+		"web/templates/account.html",
+		"web/templates/partials/account_balance.html",
+		"web/templates/partials/account_assets.html",
+		"web/templates/partials/account_orders.html",
+		"web/templates/partials/account_budget.html",
 	)
 	if err != nil {
 		log.Printf("Error parsing templates: %v", err)
@@ -73,6 +117,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	// Routes
 	router.GET("/", h.indexPage)
 	router.GET("/alerts", h.alertsPage)
+	router.GET("/account", h.accountPage)
 
 	// API routes
 	api := router.Group("/api/v1")
@@ -154,6 +199,48 @@ func (h *Handler) alertsPage(c *gin.Context) {
 		"PageTitle": "Alertas",
 		"Version":   time.Now().Unix(),
 		"content":   "alerts",
+	})
+}
+
+// accountPage renders the account overview page
+func (h *Handler) accountPage(c *gin.Context) {
+	// TODO: Get real account data from a service
+	account := AccountData{
+		TotalBalance:     1250.50,
+		AvailableBalance: 1000.00,
+		LastUpdated:      time.Now(),
+		Assets: []Asset{
+			{
+				Symbol:    "BTC",
+				Amount:    0.05,
+				ValueUSD:  2500.00,
+				Change24h: 2.5,
+			},
+		},
+		Budget: Budget{
+			Used:            750.00,
+			Limit:           2000.00,
+			UsagePercentage: 37.5,
+			Categories: []Category{
+				{
+					Name:       "Trading",
+					Amount:     500.00,
+					Percentage: 66.67,
+				},
+				{
+					Name:       "Fees",
+					Amount:     250.00,
+					Percentage: 33.33,
+				},
+			},
+		},
+	}
+
+	c.HTML(http.StatusOK, "layout", gin.H{
+		"PageTitle": "Account Overview",
+		"Version":   time.Now().Unix(),
+		"content":   "account",
+		"account":   account,
 	})
 }
 

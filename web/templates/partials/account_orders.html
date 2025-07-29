@@ -1,0 +1,58 @@
+{{ define "account_orders" }}
+<div class="orders-history">
+    <!-- Order Type Filter -->
+    <div class="mb-3">
+        <div class="btn-group" role="group" aria-label="Order type filter">
+            <button type="button" class="btn btn-outline-primary active" data-filter="all">All</button>
+            <button type="button" class="btn btn-outline-primary" data-filter="open">Open</button>
+            <button type="button" class="btn btn-outline-primary" data-filter="completed">Completed</button>
+            <button type="button" class="btn btn-outline-primary" data-filter="cancelled">Cancelled</button>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    {{ if .account.Orders }}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{ range .account.Orders }}
+                    <tr data-order-type="{{ .Status }}">
+                        <td>{{ .Date }}</td>
+                        <td>{{ .Type }}</td>
+                        <td>{{ .Amount }}</td>
+                        <td>${{ .Price }}</td>
+                        <td>
+                            <span class="badge {{ if eq .Status "completed" }}bg-success{{ else if eq .Status "cancelled" }}bg-danger{{ else }}bg-warning{{ end }}">
+                                {{ .Status }}
+                            </span>
+                        </td>
+                        <td>
+                            {{ if eq .Status "open" }}
+                                <button class="btn btn-sm btn-outline-danger" onclick="cancelOrder('{{ .ID }}')">
+                                    Cancel
+                                </button>
+                            {{ end }}
+                        </td>
+                    </tr>
+                    {{ end }}
+                </tbody>
+            </table>
+        </div>
+    {{ else }}
+        <div class="text-center text-muted py-3">
+            <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+            <p>No orders found</p>
+        </div>
+    {{ end }}
+</div>
+{{ end }} 

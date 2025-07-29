@@ -1,0 +1,62 @@
+{{ define "account_budget" }}
+<div class="budget-management">
+    <div class="row">
+        <!-- Budget Overview -->
+        <div class="col-md-6 mb-4">
+            <h6 class="text-muted mb-3">Monthly Budget Overview</h6>
+            <div class="progress mb-2" style="height: 20px;">
+                <div class="progress-bar" role="progressbar" 
+                     style="width: {{ .account.Budget.UsagePercentage }}%;"
+                     aria-valuenow="{{ .account.Budget.UsagePercentage }}" 
+                     aria-valuemin="0" aria-valuemax="100">
+                    {{ .account.Budget.UsagePercentage }}%
+                </div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">Used: ${{ .account.Budget.Used }}</small>
+                <small class="text-muted">Limit: ${{ .account.Budget.Limit }}</small>
+            </div>
+        </div>
+
+        <!-- Budget Actions -->
+        <div class="col-md-6 mb-4">
+            <h6 class="text-muted mb-3">Budget Actions</h6>
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary" onclick="adjustBudget()">
+                    <i class="fas fa-sliders-h me-2"></i>Adjust Limit
+                </button>
+                <button class="btn btn-outline-secondary" onclick="viewBudgetHistory()">
+                    <i class="fas fa-history me-2"></i>View History
+                </button>
+            </div>
+        </div>
+
+        <!-- Spending Categories -->
+        <div class="col-12">
+            <h6 class="text-muted mb-3">Spending by Category</h6>
+            {{ if .account.Budget.Categories }}
+                {{ range .account.Budget.Categories }}
+                <div class="category-item mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>{{ .Name }}</span>
+                        <span>${{ .Amount }}</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-info" role="progressbar" 
+                             style="width: {{ .Percentage }}%"
+                             aria-valuenow="{{ .Percentage }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+                {{ end }}
+            {{ else }}
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-chart-pie fa-2x mb-2"></i>
+                    <p>No spending categories defined</p>
+                </div>
+            {{ end }}
+        </div>
+    </div>
+</div>
+{{ end }} 

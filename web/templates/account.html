@@ -1,0 +1,57 @@
+{{ define "account_content" }}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Balance Summary Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-wallet"></i> Balance Summary</h5>
+                </div>
+                <div class="card-body">
+                    {{ template "account_balance" . }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Assets Overview Card -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-coins"></i> Assets</h5>
+                </div>
+                <div class="card-body">
+                    {{ template "account_assets" . }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders History -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Orders History</h5>
+                </div>
+                <div class="card-body">
+                    {{ template "account_orders" . }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Management -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Budget Management</h5>
+                </div>
+                <div class="card-body">
+                    {{ template "account_budget" . }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ end }} 

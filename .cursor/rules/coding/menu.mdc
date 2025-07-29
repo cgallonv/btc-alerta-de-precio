@@ -408,3 +408,135 @@ Before submitting:
    - [ ] Routes tested
    - [ ] Error handling tested
    - [ ] Responsive design verified
+
+## Hamburger Menu Modifications
+
+### Structure Overview
+The hamburger menu is a critical navigation component with specific requirements:
+
+1. **Core Components**
+   ```html
+   <!-- Required Structure -->
+   <button id="hamburgerBtn">...</button>
+   <div id="sideMenuOverlay">...</div>
+   <nav id="sideMenu">
+       <div class="d-flex flex-column h-100">
+           <div class="p-4 bg-bitcoin">...</div>
+           <ul class="nav flex-column mt-3" role="menu">
+               <!-- Menu Items Here -->
+           </ul>
+       </div>
+   </nav>
+   ```
+
+2. **Adding Menu Items**
+   ```html
+   <li class="nav-item" role="none">
+       <a class="nav-link px-4 py-3{{ if eq .CurrentPage "feature_name" }} active{{ end }}" 
+          href="/feature-path" 
+          role="menuitem" 
+          tabindex="0">
+           <i class="fas fa-icon me-2 bitcoin-color" aria-hidden="true"></i> Menu Text
+       </a>
+   </li>
+   ```
+
+### Required Elements
+1. **Button Component**
+   - Must maintain `id="hamburgerBtn"`
+   - Requires ARIA attributes for accessibility
+   - Positioned fixed with proper z-index
+
+2. **Overlay Component**
+   - Must maintain `id="sideMenuOverlay"`
+   - Required for click-outside closing
+   - Proper z-index layering
+
+3. **Navigation Component**
+   - Must maintain `id="sideMenu"`
+   - Proper semantic structure with roles
+   - Transition animations
+
+### Accessibility Requirements
+1. **ARIA Attributes**
+   ```html
+   <button aria-label="Abrir menú de navegación" 
+           aria-controls="sideMenu" 
+           aria-expanded="false">
+   ```
+
+2. **Keyboard Navigation**
+   - Enter/Space to open menu
+   - Escape to close
+   - Tab navigation through items
+   - Focus management
+
+3. **Semantic Structure**
+   - Proper heading hierarchy
+   - Role attributes
+   - Hidden states
+
+### JavaScript Integration
+1. **Required Event Handlers**
+   - Click events
+   - Keyboard events
+   - Focus management
+   - State management
+
+2. **Animation Management**
+   - Transform transitions
+   - Overlay handling
+   - Focus trapping
+
+### Example: Adding a New Section
+```html
+<!-- DON'T DO THIS -->
+<div class="side-menu">
+    <a href="/feature">
+        <i class="fas fa-icon"></i> Feature
+    </a>
+</div>
+
+<!-- DO THIS -->
+<li class="nav-item" role="none">
+    <a class="nav-link px-4 py-3{{ if eq .CurrentPage "feature" }} active{{ end }}"
+       href="/feature"
+       role="menuitem"
+       tabindex="0">
+        <i class="fas fa-icon me-2 bitcoin-color" aria-hidden="true"></i> Feature
+    </a>
+</li>
+```
+
+### Common Mistakes to Avoid
+1. **Structure Breaking**
+   - Don't remove the overlay component
+   - Don't change IDs of core components
+   - Don't simplify the menu structure
+
+2. **Accessibility Breaking**
+   - Don't remove ARIA attributes
+   - Don't remove role attributes
+   - Don't break keyboard navigation
+
+3. **Style Breaking**
+   - Don't modify core transition classes
+   - Don't change z-index hierarchy
+   - Maintain consistent padding/margins
+
+### Testing Checklist
+Before committing menu changes:
+1. **Functionality**
+   - [ ] Menu opens/closes properly
+   - [ ] Overlay works correctly
+   - [ ] Active states work
+
+2. **Accessibility**
+   - [ ] Keyboard navigation works
+   - [ ] Screen reader compatibility
+   - [ ] Focus management works
+
+3. **Responsiveness**
+   - [ ] Works on mobile
+   - [ ] Proper transitions
+   - [ ] No layout breaking
