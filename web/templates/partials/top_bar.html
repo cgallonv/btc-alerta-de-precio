@@ -1,19 +1,19 @@
 {{ define "top_bar" }}
 <!-- Connection Status -->
-<div class="connection-status">
-    <span id="connectionIndicator" class="badge bg-success online">
-        <i class="fas fa-wifi"></i> Conectado
+<div class="connection-status" aria-live="polite">
+    <span id="connectionIndicator" class="badge bg-success online" role="status" aria-live="polite">
+        <i class="fas fa-wifi" aria-hidden="true"></i> Conectado
     </span>
 </div>
 
-<nav class="navbar navbar-expand-lg bg-bitcoin text-white mb-4">
+<nav class="navbar navbar-expand-lg bg-bitcoin text-white mb-4" role="navigation" aria-label="Main navigation">
     <div class="container">
-        <a class="navbar-brand text-white" href="/">
-            <i class="fab fa-bitcoin"></i> Bitcoin Price Alert
+        <a class="navbar-brand text-white" href="/" aria-label="Ir al inicio">
+            <i class="fab fa-bitcoin" aria-hidden="true"></i> Bitcoin Price Alert
         </a>
         <div class="navbar-nav ms-auto">
-            <span class="nav-text text-white me-3">
-                <i class="fas fa-chart-line"></i> Actualización cada <span id="updateInterval">15</span>s
+            <span class="nav-text text-white me-3" aria-label="Intervalo de actualización">
+                <i class="fas fa-chart-line" aria-hidden="true"></i> Actualización cada <span id="updateInterval">15</span>s
             </span>
         </div>
     </div>

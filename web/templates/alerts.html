@@ -31,97 +31,12 @@
                         <h5 class="mb-0"><i class="fas fa-plus"></i> Nueva Alerta</h5>
                     </div>
                     <div class="card-body">
-                        <form id="alertForm">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre de la Alerta</label>
-                                <input type="text" class="form-control" id="alertName" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Tipo de Alerta</label>
-                                <select class="form-control" id="alertType" required>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="above">Precio por encima de</option>
-                                    <option value="below">Precio por debajo de</option>
-                                    <option value="change">Cambio porcentual</option>
-                                </select>
-                            </div>
-                            <div class="mb-3" id="priceGroup">
-                                <label class="form-label">Precio Objetivo ($)</label>
-                                <input type="number" class="form-control" id="targetPrice" step="0.01" min="0">
-                            </div>
-                            <div class="mb-3" id="percentageGroup" style="display: none;">
-                                <label class="form-label">Porcentaje de Cambio (%)</label>
-                                <input type="number" class="form-control" id="percentage" step="0.1" min="0.1">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" id="alertEmail" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Tipos de Notificación</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableEmail" checked>
-                                    <label class="form-check-label">
-                                        <i class="fas fa-envelope text-primary"></i> Notificación por Email
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableTelegram" checked>
-                                    <label class="form-check-label">
-                                        <i class="fab fa-telegram text-info"></i> Notificación por Telegram
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="enableWhatsApp">
-                                    <label class="form-check-label">
-                                        <i class="fab fa-whatsapp text-success"></i> Notificación por WhatsApp
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="mb-3" id="whatsAppGroup" style="display: none;">
-                                <label class="form-label">
-                                    <i class="fab fa-whatsapp"></i> Número de WhatsApp
-                                </label>
-                                <input type="text" class="form-control" id="whatsAppNumber">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Idioma</label>
-                                <select class="form-control" id="language" required>
-                                    <option value="es">Español</option>
-                                    <option value="en">English</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-bell"></i> Crear Alerta
-                            </button>
-                        </form>
+                        {{ template "alerts_form" . }}
                     </div>
                 </div>
             </div>
             <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-list"></i> Mis Alertas</h5>
-                        <div>
-                            <button class="btn btn-sm btn-outline-danger me-2" onclick="deleteAllAlerts()">
-                                <i class="fas fa-trash"></i> Delete all
-                            </button>
-                            <button class="btn btn-sm btn-outline-light me-2" onclick="preloadAlerts()">
-                                <i class="fas fa-database"></i> Preload
-                            </button>
-                            <button class="btn btn-sm btn-outline-light" onclick="loadAlerts()">
-                                <i class="fas fa-refresh"></i> Actualizar
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div id="alertsList">
-                            <div class="text-center text-muted">
-                                <i class="fas fa-spinner fa-spin"></i> Cargando alertas...
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{ template "alerts_list" . }}
             </div>
         </div>
     </div>

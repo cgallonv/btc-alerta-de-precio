@@ -7,7 +7,11 @@ import (
 	"btc-alerta-de-precio/internal/storage"
 )
 
-// PriceCacheEntry represents a cached price entry for API responses
+// PriceCacheEntry represents a cached price entry for API responses.
+//
+// Example usage:
+//
+//	entry := PriceCacheEntry{Price: 30000, Currency: "USD", Timestamp: time.Now()}
 type PriceCacheEntry struct {
 	Price              float64   `json:"price"`
 	PriceChangePercent float64   `json:"price_change_percent"`
@@ -16,8 +20,13 @@ type PriceCacheEntry struct {
 	Timestamp          time.Time `json:"timestamp"`
 }
 
-// AlertService defines the interface for alert service operations
-// This is used by the API layer to interact with alert functionality
+// AlertService defines the interface for alert service operations.
+// This is used by the API layer to interact with alert functionality.
+//
+// Example usage:
+//
+//	var svc AlertService = NewAlertService(...)
+//	err := svc.CreateAlert(alert)
 type AlertService interface {
 	// Alert CRUD operations
 	CreateAlert(alert *storage.Alert) error

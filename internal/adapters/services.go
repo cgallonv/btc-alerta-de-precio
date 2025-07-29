@@ -11,11 +11,21 @@ import (
 	"btc-alerta-de-precio/internal/storage"
 )
 
-// BitcoinClientAdapter adapts bitcoin.Client to implement PriceClient interface
+// BitcoinClientAdapter adapts bitcoin.Client to implement PriceClient interface.
+//
+// Example usage:
+//
+//	adapter := NewBitcoinClientAdapter(client)
+//	price, err := adapter.GetCurrentPrice()
 type BitcoinClientAdapter struct {
 	client *bitcoin.Client
 }
 
+// NewBitcoinClientAdapter creates a new BitcoinClientAdapter.
+//
+// Example usage:
+//
+//	adapter := NewBitcoinClientAdapter(client)
 func NewBitcoinClientAdapter(client *bitcoin.Client) interfaces.PriceClient {
 	return &BitcoinClientAdapter{client: client}
 }
@@ -36,11 +46,21 @@ func (a *BitcoinClientAdapter) GetPriceHistory(days int) ([]bitcoin.PriceData, e
 	return history, nil
 }
 
-// NotificationServiceAdapter adapts notifications.Service to implement NotificationSender interface
+// NotificationServiceAdapter adapts notifications.Service to implement NotificationSender interface.
+//
+// Example usage:
+//
+//	adapter := NewNotificationServiceAdapter(service)
+//	err := adapter.SendAlert(data)
 type NotificationServiceAdapter struct {
 	service *notifications.Service
 }
 
+// NewNotificationServiceAdapter creates a new NotificationServiceAdapter.
+//
+// Example usage:
+//
+//	adapter := NewNotificationServiceAdapter(service)
 func NewNotificationServiceAdapter(service *notifications.Service) interfaces.NotificationSender {
 	return &NotificationServiceAdapter{service: service}
 }
@@ -59,9 +79,19 @@ func (a *NotificationServiceAdapter) TestTelegramNotification() error {
 	return nil
 }
 
-// AlertEvaluatorImpl implements the AlertEvaluator interface
+// AlertEvaluatorImpl implements the AlertEvaluator interface.
+//
+// Example usage:
+//
+//	evaluator := NewAlertEvaluator()
+//	shouldTrigger := evaluator.ShouldTrigger(alert, priceData)
 type AlertEvaluatorImpl struct{}
 
+// NewAlertEvaluator creates a new AlertEvaluatorImpl.
+//
+// Example usage:
+//
+//	evaluator := NewAlertEvaluator()
 func NewAlertEvaluator() interfaces.AlertEvaluator {
 	return &AlertEvaluatorImpl{}
 }
@@ -108,11 +138,21 @@ func (e *AlertEvaluatorImpl) ShouldTrigger(alert *storage.Alert, priceData *bitc
 	}
 }
 
-// ConfigAdapter adapts config.Config to implement ConfigProvider interface
+// ConfigAdapter adapts config.Config to implement ConfigProvider interface.
+//
+// Example usage:
+//
+//	adapter := NewConfigAdapter(cfg)
+//	interval := adapter.GetCheckInterval()
 type ConfigAdapter struct {
 	config *config.Config
 }
 
+// NewConfigAdapter creates a new ConfigAdapter.
+//
+// Example usage:
+//
+//	adapter := NewConfigAdapter(cfg)
 func NewConfigAdapter(config *config.Config) interfaces.ConfigProvider {
 	return &ConfigAdapter{config: config}
 }

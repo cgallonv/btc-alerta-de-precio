@@ -6,11 +6,21 @@ import (
 	"btc-alerta-de-precio/internal/storage"
 )
 
-// GormAlertRepository adapts storage.Database to implement AlertRepository interface
+// GormAlertRepository adapts storage.Database to implement AlertRepository interface.
+//
+// Example usage:
+//
+//	repo := NewGormAlertRepository(db)
+//	err := repo.CreateAlert(alert)
 type GormAlertRepository struct {
 	db *storage.Database
 }
 
+// NewGormAlertRepository creates a new GormAlertRepository.
+//
+// Example usage:
+//
+//	repo := NewGormAlertRepository(db)
 func NewGormAlertRepository(db *storage.Database) interfaces.AlertRepository {
 	return &GormAlertRepository{db: db}
 }
@@ -67,11 +77,21 @@ func (r *GormAlertRepository) ToggleAlert(id uint) error {
 	return nil
 }
 
-// GormPriceRepository adapts storage.Database to implement PriceRepository interface
+// GormPriceRepository adapts storage.Database to implement PriceRepository interface.
+//
+// Example usage:
+//
+//	repo := NewGormPriceRepository(db)
+//	price, err := repo.GetLatestPrice()
 type GormPriceRepository struct {
 	db *storage.Database
 }
 
+// NewGormPriceRepository creates a new GormPriceRepository.
+//
+// Example usage:
+//
+//	repo := NewGormPriceRepository(db)
 func NewGormPriceRepository(db *storage.Database) interfaces.PriceRepository {
 	return &GormPriceRepository{db: db}
 }
@@ -99,11 +119,21 @@ func (r *GormPriceRepository) GetPriceHistory(limit int) ([]storage.PriceHistory
 	return prices, nil
 }
 
-// GormNotificationRepository adapts storage.Database to implement NotificationRepository interface
+// GormNotificationRepository adapts storage.Database to implement NotificationRepository interface.
+//
+// Example usage:
+//
+//	repo := NewGormNotificationRepository(db)
+//	err := repo.LogNotification(log)
 type GormNotificationRepository struct {
 	db *storage.Database
 }
 
+// NewGormNotificationRepository creates a new GormNotificationRepository.
+//
+// Example usage:
+//
+//	repo := NewGormNotificationRepository(db)
 func NewGormNotificationRepository(db *storage.Database) interfaces.NotificationRepository {
 	return &GormNotificationRepository{db: db}
 }
@@ -124,11 +154,21 @@ func (r *GormNotificationRepository) GetNotificationLogs(alertID uint, limit int
 	return logs, nil
 }
 
-// GormStatsRepository adapts storage.Database to implement StatsRepository interface
+// GormStatsRepository adapts storage.Database to implement StatsRepository interface.
+//
+// Example usage:
+//
+//	repo := NewGormStatsRepository(db)
+//	stats, err := repo.GetStats()
 type GormStatsRepository struct {
 	db *storage.Database
 }
 
+// NewGormStatsRepository creates a new GormStatsRepository.
+//
+// Example usage:
+//
+//	repo := NewGormStatsRepository(db)
 func NewGormStatsRepository(db *storage.Database) interfaces.StatsRepository {
 	return &GormStatsRepository{db: db}
 }

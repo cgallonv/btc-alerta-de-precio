@@ -31,6 +31,7 @@ type AlertUpdateRequest struct {
 	Percentage  *float64 `json:"percentage,omitempty"`
 }
 
+// NewHandler creates a new Handler with the given alert service and config provider.
 func NewHandler(alertService interfaces.AlertService, configProvider interfaces.ConfigProvider) *Handler {
 	return &Handler{
 		alertService:   alertService,
@@ -38,6 +39,12 @@ func NewHandler(alertService interfaces.AlertService, configProvider interfaces.
 	}
 }
 
+// SetupRoutes configures all HTTP routes for the application.
+// Example usage:
+//
+//	router := gin.Default()
+//	handler := NewHandler(...)
+//	handler.SetupRoutes(router)
 func (h *Handler) SetupRoutes(router *gin.Engine) {
 	// Servir archivos estáticos
 	router.Static("/static", "./web/static")
@@ -51,6 +58,8 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		"web/templates/partials/edit_alert_modal.html",
 		"web/templates/partials/hamburger_menu.html",
 		"web/templates/partials/top_bar.html",
+		"web/templates/partials/alerts_form.html",
+		"web/templates/partials/alerts_list.html",
 	))
 	router.SetHTMLTemplate(templ)
 
@@ -93,7 +102,8 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	}
 }
 
-// Páginas web
+// indexPage renders the dashboard page.
+// Route: GET /
 func (h *Handler) indexPage(c *gin.Context) {
 	stats, _ := h.alertService.GetStats()
 	c.HTML(http.StatusOK, "index.html", gin.H{
@@ -103,7 +113,8 @@ func (h *Handler) indexPage(c *gin.Context) {
 	})
 }
 
-// Alerts page
+// alertsPage renders the alerts management page.
+// Route: GET /alerts
 func (h *Handler) alertsPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "alerts.html", gin.H{
 		"CurrentPage": "alerts",
@@ -111,7 +122,10 @@ func (h *Handler) alertsPage(c *gin.Context) {
 	})
 }
 
-// Bitcoin Price endpoints
+// getCurrentPrice handles GET /api/v1/price and returns the current Bitcoin price as JSON.
+// Example usage:
+//
+//	GET /api/v1/price
 func (h *Handler) getCurrentPrice(c *gin.Context) {
 	price, err := h.alertService.GetCurrentPrice()
 	if err != nil {
@@ -128,6 +142,10 @@ func (h *Handler) getCurrentPrice(c *gin.Context) {
 	})
 }
 
+// getPriceHistory handles GET /api/v1/price/history and returns the price history.
+// Example usage:
+//
+//	GET /api/v1/price/history?limit=24
 func (h *Handler) getPriceHistory(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "100")
 	limit, err := strconv.Atoi(limitStr)
@@ -154,6 +172,7 @@ func (h *Handler) getPriceHistory(c *gin.Context) {
 	})
 }
 
+// getCurrentPercentage handles GET /api/v1/price/percentage and returns the current price change percentage.
 func (h *Handler) getCurrentPercentage(c *gin.Context) {
 	percentage := h.alertService.GetCurrentPercentage()
 
@@ -167,6 +186,7 @@ func (h *Handler) getCurrentPercentage(c *gin.Context) {
 }
 
 // Alert endpoints
+// getAlerts handles GET /api/v1/alerts and returns all alerts.
 func (h *Handler) getAlerts(c *gin.Context) {
 	alerts, err := h.alertService.GetAlerts()
 	if err != nil {
@@ -183,6 +203,7 @@ func (h *Handler) getAlerts(c *gin.Context) {
 	})
 }
 
+// getAlert handles GET /api/v1/alerts/:id and returns a specific alert by ID.
 func (h *Handler) getAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -208,6 +229,7 @@ func (h *Handler) getAlert(c *gin.Context) {
 	})
 }
 
+// createAlert handles POST /api/v1/alerts and creates a new alert.
 func (h *Handler) createAlert(c *gin.Context) {
 	var alert storage.Alert
 	if err := c.ShouldBindJSON(&alert); err != nil {
@@ -233,6 +255,7 @@ func (h *Handler) createAlert(c *gin.Context) {
 	})
 }
 
+// updateAlert handles PUT /api/v1/alerts/:id and updates an existing alert.
 func (h *Handler) updateAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -306,6 +329,7 @@ func (h *Handler) updateAlert(c *gin.Context) {
 	})
 }
 
+// deleteAlert handles DELETE /api/v1/alerts/:id and deletes an alert by ID.
 func (h *Handler) deleteAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -330,6 +354,7 @@ func (h *Handler) deleteAlert(c *gin.Context) {
 	})
 }
 
+// toggleAlert handles POST /api/v1/alerts/:id/toggle and toggles the active state of an alert.
 func (h *Handler) toggleAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -354,6 +379,7 @@ func (h *Handler) toggleAlert(c *gin.Context) {
 	})
 }
 
+// testAlert handles POST /api/v1/alerts/:id/test and sends a test notification for an alert.
 func (h *Handler) testAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -378,6 +404,7 @@ func (h *Handler) testAlert(c *gin.Context) {
 	})
 }
 
+// resetAlert handles POST /api/v1/alerts/:id/reset and resets an alert so it can be triggered again.
 func (h *Handler) resetAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -403,6 +430,7 @@ func (h *Handler) resetAlert(c *gin.Context) {
 }
 
 // System endpoints
+// getStats handles GET /api/v1/stats and returns system statistics.
 func (h *Handler) getStats(c *gin.Context) {
 	stats, err := h.alertService.GetStats()
 	if err != nil {
@@ -419,6 +447,7 @@ func (h *Handler) getStats(c *gin.Context) {
 	})
 }
 
+// healthCheck handles GET/HEAD /api/v1/health and returns a health status for the service.
 func (h *Handler) healthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
@@ -431,6 +460,7 @@ func (h *Handler) healthCheck(c *gin.Context) {
 }
 
 // Web Push handlers
+// subscribeWebPush handles POST /api/v1/webpush/subscribe and saves a new Web Push subscription.
 func (h *Handler) subscribeWebPush(c *gin.Context) {
 	var req struct {
 		Endpoint string `json:"endpoint" binding:"required"`
@@ -478,6 +508,7 @@ func (h *Handler) subscribeWebPush(c *gin.Context) {
 	})
 }
 
+// unsubscribeWebPush handles DELETE /api/v1/webpush/unsubscribe and removes a Web Push subscription.
 func (h *Handler) unsubscribeWebPush(c *gin.Context) {
 	var req struct {
 		Endpoint string `json:"endpoint" binding:"required"`
@@ -514,6 +545,7 @@ func (h *Handler) unsubscribeWebPush(c *gin.Context) {
 	})
 }
 
+// getVAPIDPublicKey handles GET /api/v1/webpush/vapid-public-key and returns the VAPID public key for Web Push.
 func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
@@ -524,6 +556,7 @@ func (h *Handler) getVAPIDPublicKey(c *gin.Context) {
 }
 
 // GET /api/config
+// getConfig handles GET /api/v1/config and returns configuration values.
 func (h *Handler) getConfig(c *gin.Context) {
 	checkInterval := h.configProvider.GetCheckInterval()
 	checkIntervalMs := int(checkInterval.Milliseconds())
@@ -538,6 +571,7 @@ func (h *Handler) getConfig(c *gin.Context) {
 }
 
 // POST /api/v1/preload-alerts
+// preloadAlerts handles POST /api/v1/preload-alerts and creates a set of sample alerts for testing.
 func (h *Handler) preloadAlerts(c *gin.Context) {
 	alerts := []storage.Alert{
 		{
@@ -644,6 +678,7 @@ func (h *Handler) preloadAlerts(c *gin.Context) {
 }
 
 // POST /api/v1/delete-all-alerts
+// deleteAllAlerts handles POST /api/v1/delete-all-alerts and deletes all alerts from the system.
 func (h *Handler) deleteAllAlerts(c *gin.Context) {
 	alerts, err := h.alertService.GetAlerts()
 	if err != nil {
