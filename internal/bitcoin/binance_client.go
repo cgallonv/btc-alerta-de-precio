@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -126,11 +127,18 @@ type PriceData struct {
 //	    log.Printf("Error: %v", err)
 //	    return
 //	}
-func NewBinanceClient(apiKey, apiSecret string, tickerStorage *TickerStorage) *BinanceClient {
+func NewBinanceClient(apiKey, apiSecret string, baseURL string, tickerStorage *TickerStorage) *BinanceClient {
 	client := resty.New()
 	client.SetTimeout(10 * time.Second)
 	client.SetHeader("X-MBX-APIKEY", apiKey)
-	client.SetBaseURL("https://api.binance.com")
+
+	if baseURL == "" {
+		baseURL = "https://api.binance.com" // Fallback to production if not specified
+		log.Printf("⚠️ No Binance URL specified, using default: %s", baseURL)
+	} else {
+		log.Printf("🔧 Using Binance API: %s", baseURL)
+	}
+	client.SetBaseURL(baseURL)
 
 	return &BinanceClient{
 		httpClient:    client,
@@ -154,7 +162,7 @@ func NewBinanceClient(apiKey, apiSecret string, tickerStorage *TickerStorage) *B
 //	    return nil, err
 //	}
 //	fmt.Printf("Total Balance: $%.2f\n", balance.TotalBalance)
-func (c *BinanceClient) GetAccountBalance() (*AccountBalance, error) {
+func (c *BinanceClient) GetAccountBalance(symbols []string) (*AccountBalance, error) {
 	timestamp := time.Now().UnixMilli()
 	queryString := fmt.Sprintf("timestamp=%d", timestamp)
 	signature := c.generateSignature(queryString)
@@ -223,7 +231,31 @@ func (c *BinanceClient) GetAccountBalance() (*AccountBalance, error) {
 		Permissions:                response.Permissions,
 	}
 
+	// Create a map for quick symbol lookup
+	symbolMap := make(map[string]bool)
+	if len(symbols) > 0 {
+		for _, symbol := range symbols {
+			symbolMap[strings.ToUpper(strings.TrimSpace(symbol))] = true
+		}
+		log.Printf("🔍 Filtering for symbols: %v", symbols)
+	}
+
+	// First filter and parse balances to avoid unnecessary API calls
+	type parsedBalance struct {
+		asset  string
+		free   float64
+		locked float64
+		total  float64
+	}
+	var validBalances []parsedBalance
+
+	// First pass: collect all balances that match our filter
 	for _, balance := range response.Balances {
+		// Skip if we have a symbol filter and this asset is not in it
+		if len(symbolMap) > 0 && !symbolMap[balance.Asset] {
+			continue
+		}
+
 		free, err := strconv.ParseFloat(balance.Free, 64)
 		if err != nil {
 			log.Printf("⚠️ Error parsing free balance for %s: %v", balance.Asset, err)
@@ -238,37 +270,63 @@ func (c *BinanceClient) GetAccountBalance() (*AccountBalance, error) {
 
 		total := free + locked
 
-		if total > 0 {
+		// Only include non-zero balances or specifically requested symbols
+		if total > 0 || (len(symbolMap) > 0 && symbolMap[balance.Asset]) {
+			validBalances = append(validBalances, parsedBalance{
+				asset:  balance.Asset,
+				free:   free,
+				locked: locked,
+				total:  total,
+			})
+		}
+	}
+
+	// Log the filtered balances before processing
+	log.Printf("📋 Processing %d filtered assets: %v", len(validBalances), func() []string {
+		var assets []string
+		for _, b := range validBalances {
+			assets = append(assets, b.asset)
+		}
+		return assets
+	}())
+
+	// Now process only the filtered balances
+	for _, balance := range validBalances {
+		// Skip price lookup for non-tradeable assets (like COP)
+		var price, change24h float64
+		if balance.asset != "COP" {
 			// Get current price for the asset
-			price, err := c.GetAssetPrice(balance.Asset + "USDT")
+			price, err = c.GetAssetPrice(balance.asset + "USDT")
 			if err != nil {
-				log.Printf("⚠️ Error getting price for %s: %v", balance.Asset, err)
+				log.Printf("⚠️ Error getting price for %s: %v", balance.asset, err)
 				price = 0
 			}
 
-			valueUSD := total * price
-			accountBalance.TotalBalance += valueUSD
-			accountBalance.AvailableBalance += free * price
-
 			// Get 24h change
-			change24h, err := c.Get24hChange(balance.Asset + "USDT")
+			change24h, err = c.Get24hChange(balance.asset + "USDT")
 			if err != nil {
-				log.Printf("⚠️ Error getting 24h change for %s: %v", balance.Asset, err)
+				log.Printf("⚠️ Error getting 24h change for %s: %v", balance.asset, err)
 				change24h = 0
 			}
-
-			accountBalance.Assets = append(accountBalance.Assets, AssetBalance{
-				Symbol:    balance.Asset,
-				Free:      balance.Free,
-				Locked:    balance.Locked,
-				Total:     total,
-				ValueUSD:  valueUSD,
-				Change24h: change24h,
-			})
-
-			log.Printf("📊 Asset %s: Free: %s, Locked: %s, Total: %.8f, Value: $%.2f, Change: %.2f%%",
-				balance.Asset, balance.Free, balance.Locked, total, valueUSD, change24h)
+		} else {
+			log.Printf("ℹ️ Skipping price lookup for non-tradeable asset: %s", balance.asset)
 		}
+
+		valueUSD := balance.total * price
+		accountBalance.TotalBalance += valueUSD
+		accountBalance.AvailableBalance += balance.free * price
+
+		accountBalance.Assets = append(accountBalance.Assets, AssetBalance{
+			Symbol:    balance.asset,
+			Free:      fmt.Sprintf("%.8f", balance.free),
+			Locked:    fmt.Sprintf("%.8f", balance.locked),
+			Total:     balance.total,
+			ValueUSD:  valueUSD,
+			Change24h: change24h,
+		})
+
+		log.Printf("📊 Asset %s: Free: %.8f, Locked: %.8f, Total: %.8f, Value: $%.2f, Change: %.2f%%",
+			balance.asset, balance.free, balance.locked, balance.total, valueUSD, change24h)
 	}
 
 	log.Printf("💰 Total balance: $%.2f, Available: $%.2f",

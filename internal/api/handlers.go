@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
@@ -234,11 +235,12 @@ func (h *Handler) accountPage(c *gin.Context) {
 	binanceClient := bitcoin.NewBinanceClient(
 		h.configProvider.GetString("binance.api_key"),
 		h.configProvider.GetString("binance.api_secret"),
+		h.configProvider.GetString("binance.base_url"),
 		nil, // No ticker storage needed for account page
 	)
 
-	// Get account balance
-	balance, err := binanceClient.GetAccountBalance()
+	// Get account balance using default symbols from config
+	balance, err := binanceClient.GetAccountBalance(h.configProvider.GetDefaultSymbols())
 	if err != nil {
 		log.Printf("Error getting account balance: %v", err)
 		c.HTML(http.StatusInternalServerError, "layout", gin.H{
@@ -786,16 +788,27 @@ func (h *Handler) deleteAllAlerts(c *gin.Context) {
 }
 
 // GetAccountBalance returns the current account balance
+// Example: GET /api/v1/account/balance?symbols=BTC,USDT,COP
 func (h *Handler) GetAccountBalance(c *gin.Context) {
+	// Get symbols from query parameter or use defaults
+	symbolsParam := c.Query("symbols")
+	var symbols []string
+	if symbolsParam != "" {
+		symbols = strings.Split(symbolsParam, ",")
+	} else {
+		// Use default symbols from config if none provided
+		symbols = h.configProvider.GetDefaultSymbols()
+	}
 	// Create Binance client
 	binanceClient := bitcoin.NewBinanceClient(
 		h.configProvider.GetString("binance.api_key"),
 		h.configProvider.GetString("binance.api_secret"),
+		h.configProvider.GetString("binance.base_url"),
 		nil, // No ticker storage needed for account balance
 	)
 
 	// Get account balance
-	balance, err := binanceClient.GetAccountBalance()
+	balance, err := binanceClient.GetAccountBalance(symbols)
 	if err != nil {
 		log.Printf("Error getting account balance: %v", err)
 		c.JSON(http.StatusInternalServerError, Response{
