@@ -127,6 +127,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 		"web/templates/index.html",
 		"web/templates/alerts.html",
 		"web/templates/account.html",
+		"web/templates/trading.html",
 		"web/templates/partials/account_balance.html",
 		"web/templates/partials/account_assets.html",
 		"web/templates/partials/account_orders.html",
@@ -142,6 +143,7 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	router.GET("/", h.indexPage)
 	router.GET("/alerts", h.alertsPage)
 	router.GET("/account", h.accountPage)
+	router.GET("/trading", h.tradingPage)
 
 	// API routes
 	api := router.Group("/api/v1")
@@ -230,6 +232,17 @@ func (h *Handler) alertsPage(c *gin.Context) {
 
 // accountPage renders the account management page.
 // Route: GET /account
+// tradingPage renders the trading strategy page.
+// Route: GET /trading
+func (h *Handler) tradingPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "layout", gin.H{
+		"PageTitle":   "Trading",
+		"Version":     time.Now().Unix(),
+		"content":     "trading",
+		"CurrentPage": "trading",
+	})
+}
+
 func (h *Handler) accountPage(c *gin.Context) {
 	// Create Binance client
 	binanceClient := bitcoin.NewBinanceClient(

@@ -1,0 +1,221 @@
+{{ define "trading" }}
+<div class="container mt-4">
+    <!-- Strategy Overview Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card strategy-card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Strategy Overview</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <h6 class="text-muted">Current Position</h6>
+                                <div class="position-badge none" id="currentPosition">No Position</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <h6 class="text-muted">Strategy Performance</h6>
+                                <h3 class="mb-0 text-success" id="strategyPerformance">+0.00%</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center mb-3">
+                                <h6 class="text-muted">Risk Level</h6>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <select class="form-select w-auto" id="riskLevel">
+                                        <option value="low">Low Risk</option>
+                                        <option value="medium">Medium Risk</option>
+                                        <option value="high">High Risk</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Chart and Controls -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i> Trading Chart
+                        <div class="float-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active">1H</button>
+                                <button type="button" class="btn btn-outline-primary">4H</button>
+                                <button type="button" class="btn btn-outline-primary">1D</button>
+                                <button type="button" class="btn btn-outline-primary">1W</button>
+                            </div>
+                        </div>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="tradingChart" style="height: 600px; width: 100%;">
+                        <!-- Chart will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Trading Controls</h5>
+                </div>
+                <div class="card-body">
+                    <form id="tradingForm">
+                        <div class="mb-3">
+                            <label class="form-label">Position Size</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="positionSize" step="0.001" min="0">
+                                <span class="input-group-text">BTC</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Stop Loss</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="stopLoss" step="0.01">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Take Profit</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="takeProfit" step="0.01">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" id="buyBtn">
+                                <i class="fas fa-arrow-up"></i> Buy/Long
+                            </button>
+                            <button type="button" class="btn btn-danger" id="sellBtn">
+                                <i class="fas fa-arrow-down"></i> Sell/Short
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Settings and History -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Strategy Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form id="strategyForm">
+                        <div class="mb-3">
+                            <label class="form-label">Strategy Type</label>
+                            <select class="form-select" id="strategyType">
+                                <option value="trend">Trend Following</option>
+                                <option value="momentum">Momentum</option>
+                                <option value="breakout">Breakout</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Indicators</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="maIndicator">
+                                <label class="form-check-label">Simple Moving Average (SMA)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="emaIndicator" checked>
+                                <label class="form-check-label">Exponential Moving Average (EMA)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rsiIndicator">
+                                <label class="form-check-label">RSI</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="macdIndicator">
+                                <label class="form-check-label">MACD</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bollingerIndicator">
+                                <label class="form-check-label">Bollinger Bands</label>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100" id="saveStrategyBtn">
+                            <i class="fas fa-save"></i> Save Strategy
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Trading History</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Price</th>
+                                    <th>Size</th>
+                                    <th>P/L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tradingHistory">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">
+                                        No trading history available
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trading Chart JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize TradingView chart
+    new TradingView.widget({
+        "container_id": "tradingChart",
+        "symbol": "BINANCE:BTCUSDT",
+        "interval": "1H",
+        "timezone": "exchange",
+        "theme": "light",
+        "style": "1",
+        "toolbar_bg": "#f1f3f6",
+        "enable_publishing": false,
+        "hide_side_toolbar": false,
+        "allow_symbol_change": false,
+        "save_image": false,
+        "studies": [
+            "MASimple@tv-basicstudies",
+            "MAExp@tv-basicstudies",  // EMA
+            "RSI@tv-basicstudies",
+            "MACD@tv-basicstudies"
+        ],
+        "studies_overrides": {
+            "moving average exponential.length": 21,  // EMA period
+            "moving average exponential.plottype": "line",  // Line style
+            "moving average exponential.color": "#2962FF"  // Blue color
+        },
+        "show_popup_button": true,
+        "popup_width": "1000",
+        "popup_height": "650"
+    });
+});
+</script>
+{{ end }}
