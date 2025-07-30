@@ -263,8 +263,26 @@ async function loadCurrentPrice() {
         
         priceElement.textContent = formattedPrice;
         
-        // Obtener porcentaje de cambio desde la API
-        updatePriceChangeFromAPI();
+        // Actualizar porcentaje de cambio
+        const priceChangeElement = document.getElementById('priceChange');
+        if (priceChangeElement) {
+            const percentage = response.data.price_change_percent;
+            const formattedPercentage = percentage > 0 
+                ? `+${percentage.toFixed(2)}%` 
+                : `${percentage.toFixed(2)}%`;
+            
+            priceChangeElement.textContent = formattedPercentage;
+            
+            // Aplicar clase CSS según el cambio
+            priceChangeElement.className = 'price-change';
+            if (percentage > 0) {
+                priceChangeElement.classList.add('positive');
+            } else if (percentage < 0) {
+                priceChangeElement.classList.add('negative');
+            } else {
+                priceChangeElement.classList.add('neutral');
+            }
+        }
         
         // Mostrar fuente de datos
         const sourceText = response.data.source ? ` (${response.data.source})` : '';
@@ -311,40 +329,7 @@ async function loadCurrentPrice() {
     }
 }
 
-// Actualizar porcentaje de cambio desde la API
-async function updatePriceChangeFromAPI() {
-    try {
-        const response = await apiCall('/price/percentage');
-        const percentage = response.data.percentage;
-        
-        const priceChangeElement = document.getElementById('priceChange');
-        if (!priceChangeElement) return;
-        
-        // Formatear el porcentaje
-        const formattedPercentage = percentage > 0 
-            ? `+${percentage.toFixed(2)}%` 
-            : `${percentage.toFixed(2)}%`;
-        
-        priceChangeElement.textContent = formattedPercentage;
-        
-        // Aplicar clase CSS según el cambio
-        priceChangeElement.className = 'price-change';
-        if (percentage > 0) {
-            priceChangeElement.classList.add('positive');
-        } else if (percentage < 0) {
-            priceChangeElement.classList.add('negative');
-        } else {
-            priceChangeElement.classList.add('neutral');
-        }
-        
-        console.log(`Porcentaje de cambio actualizado desde API: ${formattedPercentage}`);
-        
-    } catch (error) {
-        console.error('Error loading percentage change:', error);
-        // Si falla la API del porcentaje, mantener el valor actual
-    }
-}
-
+// Remover la función updatePriceChangeFromAPI ya que no se usa
 // Actualizar estadísticas del dashboard
 async function updateStats() {
     try {
