@@ -30,6 +30,9 @@
 
             // Update assets table
             updateAssetsTable(response.data.Assets);
+
+            // Show success notification
+            showNotification('Account information updated successfully', 'success');
         } catch (error) {
             console.error('Error updating balance:', error);
             showNotification('Error updating balance information', 'danger');
@@ -205,12 +208,25 @@
         }
     };
 
+    // Add refresh button click handler
+    window.refreshAccountData = function() {
+        const refreshButton = document.querySelector('#refresh-account-btn');
+        if (refreshButton) {
+            refreshButton.disabled = true;
+            refreshButton.innerHTML = '<i class="fas fa-sync fa-spin"></i> Updating...';
+        }
+
+        updateBalance().finally(() => {
+            if (refreshButton) {
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = '<i class="fas fa-sync"></i> Refresh';
+            }
+        });
+    };
+
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
         setupOrderFilters();
         updateBalance(); // Initial balance update
-        
-        // Update balance every minute
-        setInterval(updateBalance, 60000);
     });
 })(); 
