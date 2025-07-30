@@ -149,6 +149,59 @@ curl -X POST http://localhost:8080/api/v1/alerts \
   }'
 ```
 
+## 📈 Datos Históricos de Binance
+
+### Cargar Datos Históricos
+
+La aplicación incluye un script para cargar datos históricos de precios de Bitcoin desde Binance:
+
+```bash
+go run scripts/backfill_historical_data.go
+```
+
+### Características
+
+- 📊 Carga datos de los últimos 60 días
+- ⏱️ Intervalos de 1 minuto para máxima precisión
+- 🔄 Manejo automático de límites de rate de la API
+- 💾 Almacenamiento en la base de datos local
+- 🔍 Datos completos incluyendo:
+  - Precio de apertura/cierre
+  - Máximos y mínimos
+  - Volumen de trading
+  - Número de trades
+
+### Configuración
+
+1. Asegúrate de tener las credenciales de Binance en tu archivo `.env`:
+```env
+BINANCE_API_KEY=tu_api_key
+BINANCE_API_SECRET=tu_api_secret
+DATABASE_PATH=btc_market_data_prod.db
+```
+
+2. Ejecuta el script:
+```bash
+go run scripts/backfill_historical_data.go
+```
+
+### Detalles Técnicos
+
+- **Intervalo**: 1 minuto
+- **Puntos de datos**: ~86,400 (60 días × 24 horas × 60 minutos)
+- **Chunks**: Datos obtenidos en bloques de 24 horas
+- **Rate Limiting**: Espera automática entre chunks
+- **Manejo de errores**: Continúa con el siguiente chunk si hay errores
+- **Compatibilidad**: Usa el mismo esquema de base de datos que la aplicación principal
+
+### Uso de los Datos
+
+Los datos históricos se pueden usar para:
+- 📊 Análisis de tendencias
+- 📈 Gráficos detallados
+- 🔍 Backtesting de estrategias
+- 📉 Análisis de volatilidad
+
 ## 🔄 Actualizaciones Automáticas
 
 - **💰 Precio**: Cada 15 segundos (frontend)

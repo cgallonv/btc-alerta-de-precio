@@ -523,3 +523,84 @@ func (p *PriceData) String() string {
 		p.FormatPriceChange(),
 		p.Source)
 }
+
+// GetHistoricalKlines fetches historical kline/candlestick data for a symbol.
+// Interval can be: 1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M
+//
+// Example usage:
+//
+//	klines, err := client.GetHistoricalKlines("BTCUSDT", "1m", time.Now().Add(-60*24*time.Hour), time.Now())
+//	if err != nil {
+//	    log.Printf("Error: %v", err)
+//	    return
+//	}
+func (c *BinanceClient) GetHistoricalKlines(symbol, interval string, startTime, endTime time.Time) ([]Ticker24hResponse, error) {
+	log.Printf("🔄 Fetching historical klines for %s from %s to %s", symbol, startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+
+	var klines [][]interface{}
+	resp, err := c.httpClient.R().
+		SetQueryParams(map[string]string{
+			"symbol":    symbol,
+			"interval":  interval,
+			"startTime": fmt.Sprintf("%d", startTime.UnixMilli()),
+			"endTime":   fmt.Sprintf("%d", endTime.UnixMilli()),
+			"limit":     "1000", // Max limit per request
+		}).
+		SetResult(&klines).
+		Get("/api/v3/klines")
+
+	if err != nil {
+		log.Printf("❌ Error fetching historical klines: %v", err)
+		return nil, fmt.Errorf("error fetching historical klines: %w", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		binanceErr := NewBinanceError(resp.StatusCode(), resp.String())
+		log.Printf("❌ Binance API error: %v", binanceErr)
+		return nil, binanceErr
+	}
+
+	var tickers []Ticker24hResponse
+	for _, k := range klines {
+		// Convert kline data to Ticker24hResponse format
+		openTime := k[0].(float64)
+		closeTime := k[6].(float64)
+		openPrice := k[1].(string)
+		highPrice := k[2].(string)
+		lowPrice := k[3].(string)
+		closePrice := k[4].(string)
+		volume := k[5].(string)
+		quoteVolume := k[7].(string)
+		trades := k[8].(float64)
+
+		priceChange := fmt.Sprintf("%f", stringToFloat64(closePrice)-stringToFloat64(openPrice))
+		priceChangePercent := fmt.Sprintf("%f", (stringToFloat64(closePrice)-stringToFloat64(openPrice))/stringToFloat64(openPrice)*100)
+
+		ticker := Ticker24hResponse{
+			Symbol:             symbol,
+			OpenTime:           int64(openTime),
+			CloseTime:          int64(closeTime),
+			OpenPrice:          openPrice,
+			HighPrice:          highPrice,
+			LowPrice:           lowPrice,
+			LastPrice:          closePrice,
+			Volume:             volume,
+			QuoteVolume:        quoteVolume,
+			Count:              int64(trades),
+			PriceChange:        priceChange,
+			PriceChangePercent: priceChangePercent,
+			WeightedAvgPrice:   closePrice, // Using close price as weighted avg
+			PrevClosePrice:     openPrice,  // Using open price as prev close
+		}
+		tickers = append(tickers, ticker)
+	}
+
+	log.Printf("✅ Fetched %d historical klines", len(tickers))
+	return tickers, nil
+}
+
+// Helper function to convert string to float64
+func stringToFloat64(s string) float64 {
+	f, _ := strconv.ParseFloat(s, 64)
+	return f
+}
