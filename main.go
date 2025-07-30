@@ -60,10 +60,7 @@ func main() {
 	// Create services
 	notificationService := notifications.NewService(cfg, db)
 
-	// Create price monitor
-	priceMonitor := alerts.NewPriceMonitor(configAdapter, 20)
-
-	// Create alert manager
+	// Create alert manager (which creates its own price monitor)
 	alertManager, err := alerts.NewAlertManager(
 		configAdapter,
 		notificationService,
@@ -73,6 +70,11 @@ func main() {
 	)
 	if err != nil {
 		log.Fatalf("Error creating alert manager: %v", err)
+	}
+
+	// Start alert manager (which starts price monitoring)
+	if err := alertManager.Start(context.Background()); err != nil {
+		log.Printf("Error starting alert manager: %v", err)
 	}
 
 	// Create alert service adapter
@@ -89,11 +91,6 @@ func main() {
 
 	// Configure router
 	handler.SetupRoutes(router)
-
-	// Start price monitoring
-	if err := priceMonitor.Start(context.Background()); err != nil {
-		log.Printf("Error starting price monitor: %v", err)
-	}
 
 	// Start server
 	port := cfg.Port

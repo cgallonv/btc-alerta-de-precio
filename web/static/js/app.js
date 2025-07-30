@@ -405,6 +405,15 @@ async function loadPriceHistory() {
         updatePriceChart(response.data);
     } catch (error) {
         console.error('Error loading price history:', error);
+        const chartContainer = document.getElementById('priceChart');
+        if (chartContainer) {
+            chartContainer.parentElement.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <p>Error cargando historial de precios</p>
+                </div>
+            `;
+        }
     }
 }
 
@@ -412,11 +421,22 @@ async function loadPriceHistory() {
 function updatePriceChart(priceData) {
     const priceChartElement = document.getElementById('priceChart');
     if (!priceChartElement) return;
+
+    // Set chart height
+    priceChartElement.style.height = '300px';
     const ctx = priceChartElement.getContext('2d');
     
     if (priceChart) {
         priceChart.destroy();
     }
+    
+    // Get min and max prices for better Y-axis scaling
+    const prices = priceData.map(item => item.price).reverse();
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+    const yMin = Math.max(0, minPrice - (priceRange * 0.1)); // 10% padding below
+    const yMax = maxPrice + (priceRange * 0.1); // 10% padding above
     
     const labels = priceData.map(item => 
         new Date(item.timestamp).toLocaleTimeString('es-ES', {
@@ -424,8 +444,6 @@ function updatePriceChart(priceData) {
             minute: '2-digit'
         })
     ).reverse();
-    
-    const prices = priceData.map(item => item.price).reverse();
     
     priceChart = new Chart(ctx, {
         type: 'line',
@@ -438,7 +456,9 @@ function updatePriceChart(priceData) {
                 backgroundColor: 'rgba(247, 147, 26, 0.1)',
                 borderWidth: 2,
                 fill: true,
-                tension: 0.1
+                tension: 0.1,
+                pointRadius: 3,
+                pointHoverRadius: 5
             }]
         },
         options: {
@@ -447,10 +467,20 @@ function updatePriceChart(priceData) {
             scales: {
                 y: {
                     beginAtZero: false,
+                    min: yMin,
+                    max: yMax,
                     ticks: {
                         callback: function(value) {
                             return '$' + value.toLocaleString();
                         }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
                     }
                 }
             },
@@ -463,8 +493,26 @@ function updatePriceChart(priceData) {
                         label: function(context) {
                             return '$' + context.parsed.y.toLocaleString();
                         }
-                    }
+                    },
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleFont: {
+                        size: 12
+                    },
+                    bodyFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    padding: 12,
+                    displayColors: false
                 }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
+            animation: {
+                duration: 750,
+                easing: 'easeInOutQuart'
             }
         }
     });
