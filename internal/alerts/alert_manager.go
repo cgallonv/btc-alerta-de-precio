@@ -44,9 +44,9 @@ type AlertManager struct {
 	// Price monitoring
 	priceMonitor *PriceMonitor
 
-	// Alert processing
-	processingMux sync.RWMutex
-	isProcessing  bool
+	// Alert processing - used to prevent concurrent alert processing
+	processingMux sync.RWMutex // Protects isProcessing
+	isProcessing  bool         // Indicates if alerts are currently being processed
 }
 
 // NewAlertManager creates a new alert manager with the provided dependencies.
@@ -135,10 +135,16 @@ func (am *AlertManager) IsMonitoring() bool {
 
 // checkAlerts evaluates all active alerts against the current price.
 func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
+	if priceData == nil {
+		log.Printf("Warning: Received nil price data")
+		return
+	}
+
 	am.processingMux.Lock()
 	defer am.processingMux.Unlock()
 
 	if am.isProcessing {
+		log.Printf("Alert processing already in progress, skipping")
 		return
 	}
 	am.isProcessing = true
@@ -170,16 +176,16 @@ func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
 func (am *AlertManager) triggerAlert(alert *storage.Alert, priceData *bitcoin.PriceData) error {
 	// Prepare notification data
 	notificationData := &notifications.NotificationData{
-		Title:         "🚨 Bitcoin Alert",
-		Message:       alert.GetDescription(),
-		Price:         priceData.Price,
-		Alert:         alert,
-		AlertID:       alert.ID,
-		AlertName:     alert.Name,
-		AlertType:     alert.Type,
-		Percentage:    priceData.PriceChangePercent,
-		Email:         alert.Email,
-		EnableEmail:   alert.EnableEmail,
+		Title:       "🚨 Bitcoin Alert",
+		Message:     alert.GetDescription(),
+		Price:       priceData.Price,
+		Alert:       alert,
+		AlertID:     alert.ID,
+		AlertName:   alert.Name,
+		AlertType:   alert.Type,
+		Percentage:  priceData.PriceChangePercent,
+		Email:       alert.Email,
+		EnableEmail: alert.EnableEmail,
 	}
 
 	// Send notification
@@ -370,17 +376,17 @@ func (am *AlertManager) TestAlert(id uint) error {
 
 	// Send test notification
 	notificationData := &notifications.NotificationData{
-		Title:         fmt.Sprintf("🧪 Test Alert: %s", alert.Name),
-		Message:       fmt.Sprintf("This is a test of alert '%s'. Current price: $%.2f (%+.2f%%)", alert.Name, priceData.Price, priceData.PriceChangePercent),
-		Price:         priceData.Price,
-		Alert:         alert,
-		AlertID:       alert.ID,
-		AlertName:     alert.Name,
-		AlertType:     alert.Type,
-		Percentage:    priceData.PriceChangePercent,
-		Email:         alert.Email,
-		EnableEmail:   alert.EnableEmail,
-		IsTest:        true,
+		Title:       fmt.Sprintf("🧪 Test Alert: %s", alert.Name),
+		Message:     fmt.Sprintf("This is a test of alert '%s'. Current price: $%.2f (%+.2f%%)", alert.Name, priceData.Price, priceData.PriceChangePercent),
+		Price:       priceData.Price,
+		Alert:       alert,
+		AlertID:     alert.ID,
+		AlertName:   alert.Name,
+		AlertType:   alert.Type,
+		Percentage:  priceData.PriceChangePercent,
+		Email:       alert.Email,
+		EnableEmail: alert.EnableEmail,
+		IsTest:      true,
 	}
 
 	if err := am.notificationSender.SendAlert(notificationData); err != nil {
