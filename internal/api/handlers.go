@@ -234,6 +234,7 @@ func (h *Handler) accountPage(c *gin.Context) {
 	binanceClient := bitcoin.NewBinanceClient(
 		h.configProvider.GetString("binance.api_key"),
 		h.configProvider.GetString("binance.api_secret"),
+		nil, // No ticker storage needed for account page
 	)
 
 	// Get account balance
@@ -790,6 +791,7 @@ func (h *Handler) GetAccountBalance(c *gin.Context) {
 	binanceClient := bitcoin.NewBinanceClient(
 		h.configProvider.GetString("binance.api_key"),
 		h.configProvider.GetString("binance.api_secret"),
+		nil, // No ticker storage needed for account balance
 	)
 
 	// Get account balance

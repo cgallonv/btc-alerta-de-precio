@@ -14,6 +14,8 @@ import (
 	"btc-alerta-de-precio/internal/interfaces"
 	"btc-alerta-de-precio/internal/notifications"
 	"btc-alerta-de-precio/internal/storage"
+	"btc-alerta-de-precio/internal/storage/migrations"
+	"btc-alerta-de-precio/internal/storage/repositories"
 )
 
 // AlertServiceAdapter adapts AlertManager to AlertService interface
@@ -54,6 +56,17 @@ func main() {
 		log.Fatalf("Error initializing database: %v", err)
 	}
 
+	// Run migrations
+	if err := migrations.MigrateTickerData(db.DB()); err != nil {
+		log.Fatalf("Error running migrations: %v", err)
+	}
+
+	// Create repositories
+	tickerRepo := repositories.NewTickerRepository(db.DB())
+
+	// Create storage handlers
+	tickerStorage := bitcoin.NewTickerStorage(tickerRepo)
+
 	// Create adapters
 	configAdapter := adapters.NewConfigAdapter(cfg)
 
@@ -67,6 +80,7 @@ func main() {
 		&AlertEvaluator{},
 		db,
 		db,
+		tickerStorage,
 	)
 	if err != nil {
 		log.Fatalf("Error creating alert manager: %v", err)

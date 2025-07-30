@@ -18,10 +18,10 @@ type PriceClientAdapter struct {
 }
 
 // NewPriceClientAdapter creates a new price client adapter
-func NewPriceClientAdapter(configProvider interfaces.ConfigProvider) *PriceClientAdapter {
+func NewPriceClientAdapter(configProvider interfaces.ConfigProvider, tickerStorage *bitcoin.TickerStorage) *PriceClientAdapter {
 	apiKey := configProvider.GetString("binance.api_key")
 	apiSecret := configProvider.GetString("binance.api_secret")
-	client := bitcoin.NewBinanceClient(apiKey, apiSecret)
+	client := bitcoin.NewBinanceClient(apiKey, apiSecret, tickerStorage)
 	return &PriceClientAdapter{client: client}
 }
 

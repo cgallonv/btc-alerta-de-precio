@@ -83,6 +83,7 @@ type PriceUpdateCallback func(current *bitcoin.PriceData)
 func NewPriceMonitor(
 	configProvider interfaces.ConfigProvider,
 	cacheSize int,
+	tickerStorage *bitcoin.TickerStorage,
 ) *PriceMonitor {
 	if cacheSize <= 0 {
 		cacheSize = 20 // Default to 20 entries
@@ -91,7 +92,7 @@ func NewPriceMonitor(
 	// Create Binance client with API credentials
 	apiKey := configProvider.GetString("binance.api_key")
 	apiSecret := configProvider.GetString("binance.api_secret")
-	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret)
+	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret, tickerStorage)
 
 	return &PriceMonitor{
 		binanceClient:        binanceClient,

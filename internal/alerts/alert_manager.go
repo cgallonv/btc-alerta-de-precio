@@ -71,14 +71,15 @@ func NewAlertManager(
 	alertEvaluator interfaces.AlertEvaluator,
 	alertRepo interfaces.AlertRepository,
 	notificationRepo interfaces.NotificationRepository,
+	tickerStorage *bitcoin.TickerStorage,
 ) (*AlertManager, error) {
 	// Create Binance client with API credentials
 	apiKey := configProvider.GetString("binance.api_key")
 	apiSecret := configProvider.GetString("binance.api_secret")
-	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret)
+	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret, tickerStorage)
 
 	// Create price monitor
-	priceMonitor := NewPriceMonitor(configProvider, 20)
+	priceMonitor := NewPriceMonitor(configProvider, 20, tickerStorage)
 
 	manager := &AlertManager{
 		binanceClient:      binanceClient,

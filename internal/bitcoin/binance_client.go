@@ -26,9 +26,10 @@ import (
 //	}
 //	fmt.Printf("Total Balance: $%.2f\n", balance.TotalBalance)
 type BinanceClient struct {
-	httpClient *resty.Client
-	apiKey     string
-	apiSecret  string
+	httpClient    *resty.Client
+	apiKey        string
+	apiSecret     string
+	tickerStorage *TickerStorage
 }
 
 // AccountBalance represents account balance information from Binance API.
@@ -125,16 +126,17 @@ type PriceData struct {
 //	    log.Printf("Error: %v", err)
 //	    return
 //	}
-func NewBinanceClient(apiKey, apiSecret string) *BinanceClient {
+func NewBinanceClient(apiKey, apiSecret string, tickerStorage *TickerStorage) *BinanceClient {
 	client := resty.New()
 	client.SetTimeout(10 * time.Second)
 	client.SetHeader("X-MBX-APIKEY", apiKey)
 	client.SetBaseURL("https://api.binance.com")
 
 	return &BinanceClient{
-		httpClient: client,
-		apiKey:     apiKey,
-		apiSecret:  apiSecret,
+		httpClient:    client,
+		apiKey:        apiKey,
+		apiSecret:     apiSecret,
+		tickerStorage: tickerStorage,
 	}
 }
 
@@ -292,13 +294,7 @@ func (c *BinanceClient) GetAccountBalance() (*AccountBalance, error) {
 func (c *BinanceClient) GetCurrentPrice() (*PriceData, error) {
 	log.Printf("🔄 Fetching BTC price from Binance API")
 
-	var response struct {
-		Symbol             string `json:"symbol"`
-		PriceChange        string `json:"priceChange"`
-		PriceChangePercent string `json:"priceChangePercent"`
-		LastPrice          string `json:"lastPrice"`
-	}
-
+	var response Ticker24hResponse
 	resp, err := c.httpClient.R().
 		SetResult(&response).
 		Get("/api/v3/ticker/24hr?symbol=BTCUSDT")
@@ -312,6 +308,14 @@ func (c *BinanceClient) GetCurrentPrice() (*PriceData, error) {
 		binanceErr := NewBinanceError(resp.StatusCode(), resp.String())
 		log.Printf("❌ Binance API error: %v", binanceErr)
 		return nil, binanceErr
+	}
+
+	// Store ticker data if storage is configured
+	if c.tickerStorage != nil {
+		if err := c.tickerStorage.StoreTicker24h("BTCUSDT", &response); err != nil {
+			log.Printf("❌ Error storing ticker data: %v", err)
+			// Don't return error here, continue with price update
+		}
 	}
 
 	price, err := strconv.ParseFloat(response.LastPrice, 64)

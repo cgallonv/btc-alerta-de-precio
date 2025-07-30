@@ -206,3 +206,9 @@ func (d *Database) Close() error {
 	}
 	return sqlDB.Close()
 }
+
+// DB returns the underlying gorm.DB instance.
+// This should be used carefully and only by internal packages.
+func (d *Database) DB() *gorm.DB {
+	return d.db
+}
