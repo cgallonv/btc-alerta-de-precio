@@ -20,4 +20,5 @@ type ConfigProvider interface {
 	IsTelegramNotificationsEnabled() bool
 	GetVAPIDPublicKey() string
 	GetString(key string) string
+	GetDefaultSymbols() []string
 }

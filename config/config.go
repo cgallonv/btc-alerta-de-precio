@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -53,8 +54,10 @@ type Config struct {
 	WhatsAppTemplateNameEN string
 
 	// Binance API
-	BinanceAPIKey    string
-	BinanceAPISecret string
+	BinanceAPIKey         string
+	BinanceAPISecret      string
+	BinanceBaseURL        string   // Base URL for Binance API
+	BinanceDefaultSymbols []string // Default symbols to track
 }
 
 func Load() (*Config, error) {
@@ -117,8 +120,10 @@ func Load() (*Config, error) {
 		WhatsAppTemplateNameEN: getEnv("WHATSAPP_TEMPLATE_NAME_EN", "btc_alert_en"),
 
 		// Binance API configuration
-		BinanceAPIKey:    binanceKey,
-		BinanceAPISecret: binanceSecret,
+		BinanceAPIKey:         binanceKey,
+		BinanceAPISecret:      binanceSecret,
+		BinanceBaseURL:        getEnv("BINANCE_BASE_URL", ""), // Empty string will use default in client
+		BinanceDefaultSymbols: strings.Split(getEnv("BINANCE_DEFAULT_SYMBOLS", "BTC,USDT"), ","),
 	}, nil
 }
 

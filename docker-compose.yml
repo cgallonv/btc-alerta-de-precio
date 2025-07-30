@@ -6,19 +6,12 @@ services:
     container_name: btc-price-alert
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      - PORT=8080
+      # Override specific values for production
       - ENVIRONMENT=production
-      - DATABASE_PATH=/app/data/btc_market_data.db
-      - CHECK_INTERVAL=30s
-      - ENABLE_DESKTOP_NOTIFICATIONS=false  # Disabled in container
-      - ENABLE_EMAIL_NOTIFICATIONS=true
-      # Email configuration (override with your values)
-      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - FROM_EMAIL=${FROM_EMAIL}
+      - DATABASE_PATH=/app/data/btc_market_data.db  # Container-specific path
     volumes:
       - ./data:/app/data
     restart: unless-stopped

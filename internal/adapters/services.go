@@ -21,7 +21,8 @@ type PriceClientAdapter struct {
 func NewPriceClientAdapter(configProvider interfaces.ConfigProvider, tickerStorage *bitcoin.TickerStorage) *PriceClientAdapter {
 	apiKey := configProvider.GetString("binance.api_key")
 	apiSecret := configProvider.GetString("binance.api_secret")
-	client := bitcoin.NewBinanceClient(apiKey, apiSecret, tickerStorage)
+	baseURL := configProvider.GetString("binance.base_url")
+	client := bitcoin.NewBinanceClient(apiKey, apiSecret, baseURL, tickerStorage)
 	return &PriceClientAdapter{client: client}
 }
 
@@ -169,7 +170,14 @@ func (a *ConfigAdapter) GetString(key string) string {
 		return a.config.BinanceAPIKey
 	case "binance.api_secret":
 		return a.config.BinanceAPISecret
+	case "binance.base_url":
+		return a.config.BinanceBaseURL
 	default:
 		return ""
 	}
+}
+
+// GetDefaultSymbols returns the configured default symbols to track
+func (a *ConfigAdapter) GetDefaultSymbols() []string {
+	return a.config.BinanceDefaultSymbols
 }

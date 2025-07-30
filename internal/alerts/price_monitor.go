@@ -92,7 +92,8 @@ func NewPriceMonitor(
 	// Create Binance client with API credentials
 	apiKey := configProvider.GetString("binance.api_key")
 	apiSecret := configProvider.GetString("binance.api_secret")
-	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret, tickerStorage)
+	baseURL := configProvider.GetString("binance.base_url")
+	binanceClient := bitcoin.NewBinanceClient(apiKey, apiSecret, baseURL, tickerStorage)
 
 	return &PriceMonitor{
 		binanceClient:        binanceClient,
