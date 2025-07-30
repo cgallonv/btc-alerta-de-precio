@@ -9,7 +9,7 @@ services:
     environment:
       - PORT=8080
       - ENVIRONMENT=production
-      - DATABASE_PATH=/app/data/alerts.db
+      - DATABASE_PATH=/app/data/btc_market_data.db
       - CHECK_INTERVAL=30s
       - ENABLE_DESKTOP_NOTIFICATIONS=false  # Disabled in container
       - ENABLE_EMAIL_NOTIFICATIONS=true

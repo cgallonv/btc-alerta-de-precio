@@ -48,7 +48,7 @@ EXPOSE 8080
 
 # Set environment variables
 ENV GIN_MODE=release
-ENV DATABASE_PATH=/app/data/alerts.db
+ENV DATABASE_PATH=/app/data/btc_market_data.db
 ENV PORT=8080
 
 # Health check
