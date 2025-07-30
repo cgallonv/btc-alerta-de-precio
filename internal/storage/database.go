@@ -46,7 +46,6 @@ func (d *Database) migrate() error {
 		&Alert{},
 		&PriceHistory{},
 		&NotificationLog{},
-		&WebPushSubscription{},
 	)
 }
 
@@ -138,37 +137,6 @@ func (d *Database) GetNotificationLogs(alertID uint, limit int) ([]NotificationL
 
 	err := query.Find(&logs).Error
 	return logs, err
-}
-
-// Web Push Subscription operations
-func (d *Database) SaveWebPushSubscription(sub *WebPushSubscription) error {
-	// Intentar actualizar primero, si no existe, crear
-	var existing WebPushSubscription
-	err := d.db.Where("endpoint = ?", sub.Endpoint).First(&existing).Error
-
-	if err == gorm.ErrRecordNotFound {
-		// No existe, crear nuevo
-		return d.db.Create(sub).Error
-	} else if err != nil {
-		return err
-	}
-
-	// Existe, actualizar
-	existing.P256dh = sub.P256dh
-	existing.Auth = sub.Auth
-	existing.UserID = sub.UserID
-	existing.IsActive = sub.IsActive
-	return d.db.Save(&existing).Error
-}
-
-func (d *Database) GetActiveWebPushSubscriptions() ([]WebPushSubscription, error) {
-	var subs []WebPushSubscription
-	err := d.db.Where("is_active = ?", true).Find(&subs).Error
-	return subs, err
-}
-
-func (d *Database) RemoveWebPushSubscription(endpoint string) error {
-	return d.db.Where("endpoint = ?", endpoint).Delete(&WebPushSubscription{}).Error
 }
 
 // Utility operations

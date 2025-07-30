@@ -31,8 +31,8 @@ type Config struct {
 	FromEmail    string
 
 	// Notificaciones
-	EnableEmailNotifications    bool
-	EnableWebPushNotifications  bool
+	EnableEmailNotifications bool
+
 	EnableTelegramNotifications bool
 	EnableWhatsAppNotifications bool
 
@@ -83,7 +83,7 @@ func Load() (*Config, error) {
 	return &Config{
 		Port:          getEnv("PORT", "8080"),
 		Environment:   getEnv("ENVIRONMENT", "development"),
-		DatabasePath:  getEnv("DATABASE_PATH", "alerts.db"),
+		DatabasePath:  getEnv("DATABASE_PATH", "btc_market_data.db"),
 		BitcoinAPIURL: getEnv("BITCOIN_API_URL", "https://api.coindesk.com/v1/bpi/currentprice.json"),
 		CheckInterval: checkInterval,
 
@@ -95,8 +95,8 @@ func Load() (*Config, error) {
 		FromEmail:    getEnv("FROM_EMAIL", ""),
 
 		// Notification settings
-		EnableEmailNotifications:    getEnvBool("ENABLE_EMAIL_NOTIFICATIONS", true),
-		EnableWebPushNotifications:  getEnvBool("ENABLE_WEB_PUSH_NOTIFICATIONS", true),
+		EnableEmailNotifications: getEnvBool("ENABLE_EMAIL_NOTIFICATIONS", true),
+
 		EnableTelegramNotifications: getEnvBool("ENABLE_TELEGRAM_NOTIFICATIONS", false),
 		EnableWhatsAppNotifications: getEnvBool("ENABLE_WHATSAPP_NOTIFICATIONS", false),
 

@@ -19,8 +19,8 @@ type Alert struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// Configuración de notificaciones
-	EnableEmail    bool `json:"enable_email" gorm:"default:true"`
-	EnableWebPush  bool `json:"enable_web_push" gorm:"default:false"`
+	EnableEmail bool `json:"enable_email" gorm:"default:true"`
+
 	EnableTelegram bool `json:"enable_telegram" gorm:"default:false"`
 	EnableWhatsApp bool `json:"enable_whatsapp" gorm:"default:false"`
 
@@ -56,17 +56,6 @@ type NotificationLog struct {
 
 	// Relación con Alert
 	Alert Alert `json:"alert" gorm:"foreignKey:AlertID"`
-}
-
-type WebPushSubscription struct {
-	ID        uint      `json:"id" gorm:"primaryKey"`
-	Endpoint  string    `json:"endpoint" gorm:"not null;unique"`
-	P256dh    string    `json:"p256dh" gorm:"not null"`
-	Auth      string    `json:"auth" gorm:"not null"`
-	UserID    string    `json:"user_id"` // Opcional, para asociar con usuarios
-	IsActive  bool      `json:"is_active" gorm:"default:true"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Métodos para Alert

@@ -17,18 +17,17 @@ type Service struct {
 }
 
 type NotificationData struct {
-	Title         string
-	Message       string
-	Price         float64
-	Alert         *storage.Alert
-	IsTest        bool
-	AlertID       uint
-	AlertName     string
-	AlertType     string
-	Percentage    float64
-	Email         string
-	EnableEmail   bool
-	EnableWebPush bool
+	Title       string
+	Message     string
+	Price       float64
+	Alert       *storage.Alert
+	IsTest      bool
+	AlertID     uint
+	AlertName   string
+	AlertType   string
+	Percentage  float64
+	Email       string
+	EnableEmail bool
 }
 
 func NewService(cfg *config.Config, db *storage.Database) *Service {
@@ -43,7 +42,7 @@ func (s *Service) SendAlert(data *NotificationData) error {
 	strategies := []NotificationStrategy{
 		NewEmailStrategy(s.config),
 		NewTelegramStrategy(s.config),
-		NewWebPushStrategy(s.config, s.db),
+
 		NewWhatsAppStrategy(s.config),
 	}
 	manager := NewNotificationManager(strategies...)

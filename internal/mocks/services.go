@@ -67,11 +67,6 @@ func (m *MockConfigProvider) IsEmailNotificationsEnabled() bool {
 	return args.Bool(0)
 }
 
-func (m *MockConfigProvider) IsWebPushNotificationsEnabled() bool {
-	args := m.Called()
-	return args.Bool(0)
-}
-
 func (m *MockConfigProvider) IsTelegramNotificationsEnabled() bool {
 	args := m.Called()
 	return args.Bool(0)

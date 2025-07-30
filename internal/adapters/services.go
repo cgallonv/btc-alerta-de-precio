@@ -155,10 +155,6 @@ func (a *ConfigAdapter) IsEmailNotificationsEnabled() bool {
 	return a.config.EnableEmailNotifications
 }
 
-func (a *ConfigAdapter) IsWebPushNotificationsEnabled() bool {
-	return a.config.EnableWebPushNotifications
-}
-
 func (a *ConfigAdapter) IsTelegramNotificationsEnabled() bool {
 	return a.config.EnableTelegramNotifications
 }

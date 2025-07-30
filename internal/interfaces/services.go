@@ -16,7 +16,7 @@ type NotificationSender interface {
 type ConfigProvider interface {
 	GetCheckInterval() time.Duration
 	IsEmailNotificationsEnabled() bool
-	IsWebPushNotificationsEnabled() bool
+
 	IsTelegramNotificationsEnabled() bool
 	GetVAPIDPublicKey() string
 	GetString(key string) string

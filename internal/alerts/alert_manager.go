@@ -102,37 +102,24 @@ func NewAlertManager(
 //
 // Example usage:
 //
-//	ctx, cancel := context.WithCancel(context.Background())
-//	defer cancel()
-//	if err := manager.Start(ctx); err != nil {
+//	if err := manager.Start(context.Background()); err != nil {
 //	    log.Printf("Error: %v", err)
 //	    return
 //	}
 func (am *AlertManager) Start(ctx context.Context) error {
-	log.Println("Starting Alert Manager...")
-
-	// Start price monitoring
-	if err := am.priceMonitor.Start(ctx); err != nil {
-		return errors.WrapError(err, "ALERT_MANAGER_START_ERROR", "Failed to start price monitoring")
-	}
-
-	return nil
+	log.Printf("Starting Alert Manager...")
+	return am.priceMonitor.Start(ctx)
 }
 
 // Stop stops alert monitoring.
-// It stops the price monitor and cleans up resources.
+// It's safe to call Stop multiple times.
+// After stopping, the manager can be restarted with Start.
 //
 // Example usage:
 //
 //	defer manager.Stop()
 func (am *AlertManager) Stop() error {
-	log.Println("Stopping Alert Manager...")
-
-	if err := am.priceMonitor.Stop(); err != nil {
-		return errors.WrapError(err, "ALERT_MANAGER_STOP_ERROR", "Failed to stop price monitoring")
-	}
-
-	return nil
+	return am.priceMonitor.Stop()
 }
 
 // IsMonitoring returns true if alert monitoring is active.
@@ -146,16 +133,20 @@ func (am *AlertManager) IsMonitoring() bool {
 	return am.priceMonitor.IsMonitoring()
 }
 
-// checkAlerts evaluates all active alerts against current price data.
-// It is called automatically when new price data is available.
+// checkAlerts evaluates all active alerts against the current price.
 func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
-	if priceData == nil {
+	am.processingMux.Lock()
+	defer am.processingMux.Unlock()
+
+	if am.isProcessing {
 		return
 	}
+	am.isProcessing = true
+	defer func() { am.isProcessing = false }()
 
 	alerts, err := am.alertRepo.GetActiveAlerts()
 	if err != nil {
-		log.Printf("Error fetching active alerts: %v", err)
+		log.Printf("Error getting active alerts: %v", err)
 		return
 	}
 
@@ -163,30 +154,24 @@ func (am *AlertManager) checkAlerts(priceData *bitcoin.PriceData) {
 		if am.alertEvaluator.ShouldTrigger(&alert, priceData) {
 			if err := am.triggerAlert(&alert, priceData); err != nil {
 				log.Printf("Error triggering alert %d: %v", alert.ID, err)
+				continue
+			}
+
+			// Mark alert as triggered
+			alert.MarkTriggered()
+			if err := am.alertRepo.UpdateAlert(&alert); err != nil {
+				log.Printf("Error updating alert %d: %v", alert.ID, err)
 			}
 		}
 	}
 }
 
-// triggerAlert processes an alert trigger.
-// It marks the alert as triggered, sends notifications, and logs the event.
+// triggerAlert sends notifications for a triggered alert.
 func (am *AlertManager) triggerAlert(alert *storage.Alert, priceData *bitcoin.PriceData) error {
-	if alert == nil {
-		return fmt.Errorf("alert is nil")
-	}
-
-	log.Printf("🚨 Triggering alert: %s (Price: $%.2f)", alert.Name, priceData.Price)
-
-	// Mark alert as triggered
-	alert.MarkTriggered()
-	if err := am.alertRepo.UpdateAlert(alert); err != nil {
-		return errors.WrapError(err, "ALERT_UPDATE_ERROR", "Failed to update triggered alert")
-	}
-
 	// Prepare notification data
 	notificationData := &notifications.NotificationData{
-		Title:         fmt.Sprintf("🚨 Bitcoin Alert: %s", alert.Name),
-		Message:       fmt.Sprintf("Bitcoin price: $%.2f (%+.2f%%)", priceData.Price, priceData.PriceChangePercent),
+		Title:         "🚨 Bitcoin Alert",
+		Message:       alert.GetDescription(),
 		Price:         priceData.Price,
 		Alert:         alert,
 		AlertID:       alert.ID,
@@ -195,7 +180,6 @@ func (am *AlertManager) triggerAlert(alert *storage.Alert, priceData *bitcoin.Pr
 		Percentage:    priceData.PriceChangePercent,
 		Email:         alert.Email,
 		EnableEmail:   alert.EnableEmail,
-		EnableWebPush: alert.EnableWebPush,
 	}
 
 	// Send notification
@@ -307,7 +291,7 @@ func (am *AlertManager) GetAlerts() ([]storage.Alert, error) {
 //	}
 func (am *AlertManager) UpdateAlert(alert *storage.Alert) error {
 	if err := am.alertRepo.UpdateAlert(alert); err != nil {
-		return errors.WrapError(err, "UPDATE_ALERT_ERROR", "Failed to update alert").WithField("alert_id", alert.ID)
+		return errors.WrapError(err, "UPDATE_ALERT_ERROR", "Failed to update alert")
 	}
 	return nil
 }
@@ -322,12 +306,12 @@ func (am *AlertManager) UpdateAlert(alert *storage.Alert) error {
 //	}
 func (am *AlertManager) DeleteAlert(id uint) error {
 	if err := am.alertRepo.DeleteAlert(id); err != nil {
-		return errors.WrapError(err, "DELETE_ALERT_ERROR", "Failed to delete alert").WithField("alert_id", id)
+		return errors.WrapError(err, "DELETE_ALERT_ERROR", "Failed to delete alert")
 	}
 	return nil
 }
 
-// ToggleAlert toggles an alert's active state.
+// ToggleAlert toggles an alert's active status.
 //
 // Example usage:
 //
@@ -337,12 +321,12 @@ func (am *AlertManager) DeleteAlert(id uint) error {
 //	}
 func (am *AlertManager) ToggleAlert(id uint) error {
 	if err := am.alertRepo.ToggleAlert(id); err != nil {
-		return errors.WrapError(err, "TOGGLE_ALERT_ERROR", "Failed to toggle alert").WithField("alert_id", id)
+		return errors.WrapError(err, "TOGGLE_ALERT_ERROR", "Failed to toggle alert")
 	}
 	return nil
 }
 
-// ResetAlert resets a triggered alert so it can be triggered again.
+// ResetAlert resets an alert's trigger status.
 //
 // Example usage:
 //
@@ -351,18 +335,16 @@ func (am *AlertManager) ToggleAlert(id uint) error {
 //	    return
 //	}
 func (am *AlertManager) ResetAlert(alertID uint) error {
-	alert, err := am.alertRepo.GetAlert(alertID)
+	alert, err := am.GetAlert(alertID)
 	if err != nil {
-		return errors.WrapError(err, "RESET_ALERT_ERROR", "Alert not found").WithField("alert_id", alertID)
+		return errors.WrapError(err, "RESET_ALERT_ERROR", "Failed to get alert for reset")
 	}
 
 	alert.Reset()
-
-	if err := am.alertRepo.UpdateAlert(alert); err != nil {
-		return errors.WrapError(err, "RESET_ALERT_UPDATE_ERROR", "Failed to reset alert").WithField("alert_id", alertID)
+	if err := am.UpdateAlert(alert); err != nil {
+		return errors.WrapError(err, "RESET_ALERT_ERROR", "Failed to update alert after reset")
 	}
 
-	log.Printf("🔄 Alert reset: %s (ID: %d)", alert.Name, alertID)
 	return nil
 }
 
@@ -375,12 +357,12 @@ func (am *AlertManager) ResetAlert(alertID uint) error {
 //	    return
 //	}
 func (am *AlertManager) TestAlert(id uint) error {
-	alert, err := am.alertRepo.GetAlert(id)
+	alert, err := am.GetAlert(id)
 	if err != nil {
-		return errors.WrapError(err, "TEST_ALERT_ERROR", "Alert not found").WithField("alert_id", id)
+		return errors.WrapError(err, "TEST_ALERT_ERROR", "Failed to get alert for test")
 	}
 
-	// Get current price for test notification
+	// Get current price for test
 	priceData, err := am.GetCurrentPrice()
 	if err != nil {
 		return errors.WrapError(err, "TEST_ALERT_ERROR", "Failed to get current price")
@@ -398,7 +380,6 @@ func (am *AlertManager) TestAlert(id uint) error {
 		Percentage:    priceData.PriceChangePercent,
 		Email:         alert.Email,
 		EnableEmail:   alert.EnableEmail,
-		EnableWebPush: alert.EnableWebPush,
 		IsTest:        true,
 	}
 
