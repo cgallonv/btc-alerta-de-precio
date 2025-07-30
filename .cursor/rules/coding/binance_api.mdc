@@ -1,0 +1,248 @@
+# Binance API Implementation Rules
+
+## Objective
+Ensure consistent, reliable, and secure implementation of Binance API integrations across the codebase.
+
+## 1. API Client Structure
+
+### Core Components
+- **MANDATORY** Implement these core components:
+  - `BinanceClient` struct with proper dependency injection
+  - Error handling with custom `BinanceError` type
+  - Ticker storage for historical data
+  - Rate limiting and retry mechanisms
+  - Proper API authentication
+
+### Client Configuration
+- **MANDATORY** Include these client settings:
+  - Configurable timeout (default: 10 seconds)
+  - API key and secret management
+  - Base URL configuration
+  - Custom HTTP client settings
+
+## 2. Error Handling
+
+### Error Types
+- **MANDATORY** Use proper error types:
+  - Custom `BinanceError` for API-specific errors
+  - Standard error codes and messages
+  - HTTP status code mapping
+  - Detailed error context
+
+### Error Recovery
+- **MANDATORY** Implement error recovery:
+  - Retry mechanism for transient errors
+  - Rate limit handling
+  - Circuit breaker for API outages
+  - Fallback mechanisms where appropriate
+
+## 3. Data Models
+
+### Response Models
+- **MANDATORY** Define clear response structures:
+  - Use proper JSON tags
+  - Include all relevant fields
+  - Add proper documentation
+  - Include validation methods
+
+### Type Conversion
+- **MANDATORY** Handle numeric conversions:
+  - Use `strconv` for string to number conversion
+  - Handle decimal precision properly
+  - Validate numeric ranges
+  - Handle conversion errors gracefully
+
+## 4. API Methods
+
+### Required Methods
+- **MANDATORY** Implement core functionality:
+  - Price data retrieval
+  - Account information
+  - Trading operations
+  - Market data
+
+### Method Structure
+- **MANDATORY** Follow this pattern:
+  ```go
+  func (c *BinanceClient) MethodName() (*ResponseType, error) {
+      // 1. Input validation
+      // 2. Request preparation
+      // 3. API call with proper error handling
+      // 4. Response parsing
+      // 5. Data storage if needed
+      // 6. Return processed result
+  }
+  ```
+
+## 5. Testing
+
+### Test Coverage
+- **MANDATORY** Include comprehensive tests:
+  - Unit tests for all methods
+  - Integration tests for API calls
+  - Mock responses for testing
+  - Error case coverage
+
+### Test Cases
+- **MANDATORY** Test these scenarios:
+  - Successful API calls
+  - Various error conditions
+  - Rate limit handling
+  - Network timeouts
+  - Invalid responses
+
+## 6. Security
+
+### Authentication
+- **MANDATORY** Implement secure authentication:
+  - HMAC SHA256 signatures
+  - API key validation
+  - Timestamp validation
+  - Request signing
+
+### Data Protection
+- **MANDATORY** Protect sensitive data:
+  - Never log API keys
+  - Secure credential storage
+  - Proper error message sanitization
+  - Safe error reporting
+
+## 7. Performance
+
+### Optimization
+- **MANDATORY** Implement performance features:
+  - Connection pooling
+  - Request caching where appropriate
+  - Efficient data structures
+  - Memory management
+
+### Monitoring
+- **MANDATORY** Add performance monitoring:
+  - Request latency tracking
+  - Error rate monitoring
+  - Rate limit tracking
+  - Resource usage monitoring
+
+## 8. Documentation
+
+### Code Documentation
+- **MANDATORY** Include comprehensive docs:
+  - GoDoc comments
+  - Usage examples
+  - Error handling examples
+  - Configuration details
+
+### Method Documentation
+- **MANDATORY** Document each method:
+  ```go
+  // MethodName performs specific operation with the Binance API.
+  // It handles specific cases and returns processed data.
+  //
+  // Example usage:
+  //
+  //     result, err := client.MethodName(params)
+  //     if err != nil {
+  //         if binanceErr, ok := err.(*BinanceError); ok {
+  //             // Handle specific error
+  //         }
+  //         return err
+  //     }
+  //     // Use result
+  ```
+
+## 9. Rate Limiting
+
+### Implementation
+- **MANDATORY** Implement rate limiting:
+  - Respect Binance API limits
+  - Implement request queuing
+  - Track request counts
+  - Handle rate limit errors
+
+### Configuration
+- **MANDATORY** Make limits configurable:
+  - Requests per second
+  - Requests per minute
+  - Weight-based limits
+  - IP-based limits
+
+## 10. Example Implementation
+
+### Basic Client
+```go
+type BinanceClient struct {
+    httpClient    *resty.Client
+    apiKey        string
+    apiSecret     string
+    tickerStorage *TickerStorage
+    rateLimiter   *RateLimiter
+}
+
+func NewBinanceClient(config *Config) (*BinanceClient, error) {
+    // Validate config
+    if err := config.Validate(); err != nil {
+        return nil, err
+    }
+
+    // Create HTTP client
+    client := resty.New().
+        SetTimeout(config.Timeout).
+        SetBaseURL(config.BaseURL).
+        SetHeader("X-MBX-APIKEY", config.APIKey)
+
+    // Create rate limiter
+    limiter := NewRateLimiter(
+        config.RequestsPerSecond,
+        config.RequestsPerMinute,
+    )
+
+    return &BinanceClient{
+        httpClient:    client,
+        apiKey:        config.APIKey,
+        apiSecret:     config.APISecret,
+        tickerStorage: NewTickerStorage(config.Storage),
+        rateLimiter:   limiter,
+    }, nil
+}
+```
+
+### Method Example
+```go
+func (c *BinanceClient) GetCurrentPrice() (*PriceData, error) {
+    // Wait for rate limit
+    if err := c.rateLimiter.Wait(); err != nil {
+        return nil, err
+    }
+
+    // Make API call
+    var response PriceResponse
+    resp, err := c.httpClient.R().
+        SetResult(&response).
+        Get("/api/v3/ticker/price?symbol=BTCUSDT")
+
+    // Handle errors
+    if err != nil {
+        return nil, fmt.Errorf("API call failed: %w", err)
+    }
+    if resp.StatusCode() != 200 {
+        return nil, NewBinanceError(resp.StatusCode(), resp.String())
+    }
+
+    // Process response
+    price, err := strconv.ParseFloat(response.Price, 64)
+    if err != nil {
+        return nil, fmt.Errorf("invalid price format: %w", err)
+    }
+
+    // Store data if needed
+    if err := c.tickerStorage.Store(price); err != nil {
+        log.Printf("Warning: Failed to store price: %v", err)
+    }
+
+    return &PriceData{
+        Price:     price,
+        Timestamp: time.Now(),
+        Source:    "Binance",
+    }, nil
+}
+```
