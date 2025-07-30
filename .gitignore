@@ -86,7 +86,7 @@ config.local.json
 
 # Data files
 data/
-storage/
+data/storage/
 
 # Cache
 .cache/
