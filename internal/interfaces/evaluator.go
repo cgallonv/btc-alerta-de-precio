@@ -1,8 +1,8 @@
 package interfaces
 
 import (
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // AlertEvaluator defines the interface for evaluating alert conditions

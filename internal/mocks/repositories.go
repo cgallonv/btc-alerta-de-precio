@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 
 	"github.com/stretchr/testify/mock"
 )

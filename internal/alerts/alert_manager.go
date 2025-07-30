@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/interfaces"
-	"btc-alerta-de-precio/internal/notifications"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/notifications"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // AlertManager coordinates alert operations and integrates with price monitoring.

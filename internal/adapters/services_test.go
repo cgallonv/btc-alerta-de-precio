@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"btc-alerta-de-precio/internal/bitcoin"
-	apperrors "btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	apperrors "github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

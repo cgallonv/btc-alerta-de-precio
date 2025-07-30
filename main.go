@@ -6,16 +6,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"btc-alerta-de-precio/config"
-	"btc-alerta-de-precio/internal/adapters"
-	"btc-alerta-de-precio/internal/alerts"
-	"btc-alerta-de-precio/internal/api"
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/interfaces"
-	"btc-alerta-de-precio/internal/notifications"
-	"btc-alerta-de-precio/internal/storage"
-	"btc-alerta-de-precio/internal/storage/migrations"
-	"btc-alerta-de-precio/internal/storage/repositories"
+	"github.com/cgallonv/btc-alerta-de-precio/config"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/adapters"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/alerts"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/api"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/notifications"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage/migrations"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage/repositories"
 )
 
 // AlertServiceAdapter adapts AlertManager to AlertService interface

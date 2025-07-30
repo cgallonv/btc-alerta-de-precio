@@ -1,7 +1,7 @@
 package interfaces
 
 import (
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // AlertRepository defines the interface for alert data operations.

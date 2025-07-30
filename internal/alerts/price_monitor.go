@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
 )
 
 var (

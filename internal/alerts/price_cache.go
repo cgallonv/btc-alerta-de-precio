@@ -5,8 +5,8 @@ package alerts
 import (
 	"sync"
 
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
 )
 
 // PriceCache manages a limited cache of recent price data.

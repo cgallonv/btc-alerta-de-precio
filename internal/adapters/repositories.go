@@ -1,9 +1,9 @@
 package adapters
 
 import (
-	"btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/interfaces"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // GormAlertRepository adapts storage.Database to implement AlertRepository interface.

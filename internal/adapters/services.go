@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"btc-alerta-de-precio/config"
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/interfaces"
-	"btc-alerta-de-precio/internal/notifications"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/config"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/notifications"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // PriceClientAdapter adapts the bitcoin.BinanceClient to the interfaces.PriceClient interface

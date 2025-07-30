@@ -1,8 +1,8 @@
 package notifications
 
 import (
-	"btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // NotificationStrategy defines the interface for different notification channels

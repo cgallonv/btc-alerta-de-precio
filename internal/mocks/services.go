@@ -1,9 +1,9 @@
 package mocks
 
 import (
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/notifications"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/notifications"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 	"time"
 
 	"github.com/stretchr/testify/mock"

@@ -3,7 +3,7 @@ package interfaces
 import (
 	"time"
 
-	"btc-alerta-de-precio/internal/notifications"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/notifications"
 )
 
 // NotificationSender defines the interface for sending notifications

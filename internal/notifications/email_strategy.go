@@ -4,9 +4,9 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"btc-alerta-de-precio/config"
-	"btc-alerta-de-precio/internal/errors"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/config"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/errors"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 
 	"gopkg.in/gomail.v2"
 )

@@ -1,4 +1,4 @@
-module btc-alerta-de-precio
+module github.com/cgallonv/btc-alerta-de-precio
 
 go 1.24
 

@@ -3,8 +3,8 @@ package interfaces
 import (
 	"time"
 
-	"btc-alerta-de-precio/internal/bitcoin"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 // PriceCacheEntry represents a cached price entry for API responses.

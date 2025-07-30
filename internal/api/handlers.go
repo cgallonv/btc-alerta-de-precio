@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"btc-alerta-de-precio/internal/interfaces"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/interfaces"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 
-	"btc-alerta-de-precio/internal/bitcoin"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/bitcoin"
 
 	"github.com/gin-gonic/gin"
 )

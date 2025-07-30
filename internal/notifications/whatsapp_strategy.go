@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"btc-alerta-de-precio/config"
-	"btc-alerta-de-precio/internal/storage"
+	"github.com/cgallonv/btc-alerta-de-precio/config"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage"
 )
 
 const (

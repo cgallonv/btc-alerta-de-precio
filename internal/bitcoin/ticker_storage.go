@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"btc-alerta-de-precio/internal/storage/models"
-	"btc-alerta-de-precio/internal/storage/repositories"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage/models"
+	"github.com/cgallonv/btc-alerta-de-precio/internal/storage/repositories"
 )
 
 // TickerStorage handles the persistence of ticker data from Binance API.
