@@ -524,8 +524,10 @@ func (p *PriceData) String() string {
 		p.Source)
 }
 
-// GetHistoricalKlines fetches historical kline/candlestick data for a symbol.
+// GetHistoricalKlines fetches historical kline/candlestick data for a symbol with automatic pagination.
 // Interval can be: 1m,3m,5m,15m,30m,1h,2h,4h,6h,8h,12h,1d,3d,1w,1M
+// This method automatically handles pagination to fetch all data in the specified time range,
+// not limited by Binance API's 1000 record limit per request.
 //
 // Example usage:
 //
@@ -534,33 +536,83 @@ func (p *PriceData) String() string {
 //	    log.Printf("Error: %v", err)
 //	    return
 //	}
+//	fmt.Printf("Fetched %d historical records\n", len(klines))
 func (c *BinanceClient) GetHistoricalKlines(symbol, interval string, startTime, endTime time.Time) ([]Ticker24hResponse, error) {
 	log.Printf("🔄 Fetching historical klines for %s from %s to %s", symbol, startTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
 
-	var klines [][]interface{}
-	resp, err := c.httpClient.R().
-		SetQueryParams(map[string]string{
-			"symbol":    symbol,
-			"interval":  interval,
-			"startTime": fmt.Sprintf("%d", startTime.UnixMilli()),
-			"endTime":   fmt.Sprintf("%d", endTime.UnixMilli()),
-			"limit":     "1000", // Max limit per request
-		}).
-		SetResult(&klines).
-		Get("/api/v3/klines")
+	var allTickers []Ticker24hResponse
+	currentStartTime := startTime
+	requestCount := 0
 
-	if err != nil {
-		log.Printf("❌ Error fetching historical klines: %v", err)
-		return nil, fmt.Errorf("error fetching historical klines: %w", err)
+	for currentStartTime.Before(endTime) {
+		requestCount++
+		log.Printf("📥 Making request %d for time range %s to %s", requestCount, currentStartTime.Format(time.RFC3339), endTime.Format(time.RFC3339))
+
+		var klines [][]interface{}
+		resp, err := c.httpClient.R().
+			SetQueryParams(map[string]string{
+				"symbol":    symbol,
+				"interval":  interval,
+				"startTime": fmt.Sprintf("%d", currentStartTime.UnixMilli()),
+				"endTime":   fmt.Sprintf("%d", endTime.UnixMilli()),
+				"limit":     "1000", // Max limit per request
+			}).
+			SetResult(&klines).
+			Get("/api/v3/klines")
+
+		if err != nil {
+			log.Printf("❌ Error fetching historical klines (request %d): %v", requestCount, err)
+			return nil, fmt.Errorf("error fetching historical klines: %w", err)
+		}
+
+		if resp.StatusCode() != 200 {
+			binanceErr := NewBinanceError(resp.StatusCode(), resp.String())
+			log.Printf("❌ Binance API error (request %d): %v", requestCount, binanceErr)
+			return nil, binanceErr
+		}
+
+		// Si no hay más datos, terminar
+		if len(klines) == 0 {
+			log.Printf("📭 No more data available, ending pagination")
+			break
+		}
+
+		// Convertir klines a tickers usando función helper
+		batchTickers := c.convertKlinesToTickers(klines, symbol)
+		allTickers = append(allTickers, batchTickers...)
+
+		log.Printf("✅ Request %d completed: fetched %d records", requestCount, len(batchTickers))
+
+		// Actualizar currentStartTime para la siguiente página
+		// Usar el closeTime del último registro + 1ms para evitar duplicados
+		lastKline := klines[len(klines)-1]
+		lastCloseTime := time.UnixMilli(int64(lastKline[6].(float64)))
+		currentStartTime = lastCloseTime.Add(time.Millisecond)
+
+		// Si obtuvimos menos de 1000 registros, hemos llegado al final
+		if len(klines) < 1000 {
+			log.Printf("📋 Received %d records (less than 1000), pagination complete", len(klines))
+			break
+		}
+
+		// Rate limiting entre requests para evitar límites de API
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	if resp.StatusCode() != 200 {
-		binanceErr := NewBinanceError(resp.StatusCode(), resp.String())
-		log.Printf("❌ Binance API error: %v", binanceErr)
-		return nil, binanceErr
-	}
+	log.Printf("✅ Historical klines fetch completed: %d total records from %d API requests", len(allTickers), requestCount)
+	return allTickers, nil
+}
 
+// convertKlinesToTickers converts raw kline data from Binance API to Ticker24hResponse format.
+// This helper function extracts the conversion logic for reusability and cleaner code.
+//
+// Example usage:
+//
+//	tickers := client.convertKlinesToTickers(klines, "BTCUSDT")
+//	fmt.Printf("Converted %d klines to tickers\n", len(tickers))
+func (c *BinanceClient) convertKlinesToTickers(klines [][]interface{}, symbol string) []Ticker24hResponse {
 	var tickers []Ticker24hResponse
+
 	for _, k := range klines {
 		// Convert kline data to Ticker24hResponse format
 		openTime := k[0].(float64)
@@ -595,8 +647,7 @@ func (c *BinanceClient) GetHistoricalKlines(symbol, interval string, startTime, 
 		tickers = append(tickers, ticker)
 	}
 
-	log.Printf("✅ Fetched %d historical klines", len(tickers))
-	return tickers, nil
+	return tickers
 }
 
 // Helper function to convert string to float64
