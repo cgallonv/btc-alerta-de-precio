@@ -78,8 +78,8 @@ func main() {
 }
 
 func analyzeGainsPotential(db *gorm.DB, opportunity *TickerAnalysis) error {
-	// Definir ventana máxima de búsqueda (2 semanas)
-	maxSearchWindow := opportunity.CloseTime.Add(14 * 24 * time.Hour)
+	// Definir ventana máxima de búsqueda (3 semanas)
+	maxSearchWindow := opportunity.CloseTime.Add(21 * 24 * time.Hour)
 
 	// Buscar todos los tiempos de ganancia en un solo query
 	time2p, time3p, time4p := findAllGainThresholds(db, opportunity.CloseTime, maxSearchWindow, opportunity.LastPrice)
@@ -147,7 +147,7 @@ func findAllGainThresholds(db *gorm.DB, baseTime, maxTime time.Time, basePrice f
 	log.Printf("   - Objetivo 2%%: %.2f", price2p)
 	log.Printf("   - Objetivo 3%%: %.2f", price3p)
 	log.Printf("   - Objetivo 4%%: %.2f", price4p)
-	log.Printf("📅 Ventana de búsqueda: %s → %s", 
+	log.Printf("📅 Ventana de búsqueda: %s → %s",
 		baseTime.Format("2006-01-02 15:04:05"),
 		maxTime.Format("2006-01-02 15:04:05"))
 
